@@ -26,6 +26,17 @@ namespace Panda
     }
 
     [Serializable]
+    public class HintRequest
+    {
+        public string problem;
+        public string code;
+        public string test_results;
+        public int level;
+        public System.Collections.Generic.List<string> previous_hints;
+        public float minutes_left;
+    }
+
+    [Serializable]
     public class HintResponse
     {
         public string text;

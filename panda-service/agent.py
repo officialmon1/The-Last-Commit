@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(max_retries=2, timeout=20.0)  # reads OPENAI_API_KEY from the environment
+client = OpenAI(max_retries=2, timeout=20.0) if os.getenv("OPENAI_API_KEY") else None
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # The panda gets more theatrical with each hint, but hints never cost the player anything.
@@ -61,6 +61,8 @@ Rules:
 def get_hint(problem, code, test_results, level, previous_hints=None,
              player_state="calm", minutes_left=None):
     level = max(1, min(3, level))
+    if client is None:
+        return CANNED[level]
     mood = mood_for(level, player_state)
     mood_desc = MOODS["gentle"][1] if mood == "gentle" else MOODS[level][1]
     prev = "\n".join(previous_hints or []) or "none"

@@ -27,6 +27,7 @@ namespace Panda
         long _currentOfferId = -1;
         long _handledId = 0;
         bool _hinting;
+        int _sessionVersion;
 
         void Awake()
         {
@@ -65,10 +66,13 @@ namespace Panda
         /// <summary>Called by a new problem block being opened: a new problem means a fresh hint session.</summary>
         public void ResetHintSession()
         {
+            _sessionVersion++;
+            _hinting = false;
+            MarkHandled();
             _level = 0;
             _history.Clear();
             _currentOfferId = -1;
-            speechBubble.Clear();
+            if (speechBubble != null) speechBubble.Clear();
         }
 
         /// <summary>Called by ClickRouter when the player clicks the panda.</summary>
@@ -79,6 +83,8 @@ namespace Panda
 
         public void ShowCelebration(string text)
         {
+            _sessionVersion++;
+            _hinting = false;
             _currentOfferId = -1;
             speechBubble.ShowText(text);
         }
@@ -86,25 +92,42 @@ namespace Panda
         void AskHint()
         {
             if (_hinting) return;
+            var service = PandaService.Instance;
+            if (service == null || !service.BackendReady)
+            {
+                speechBubble.ShowText("Panda is unavailable. Check the assistant setup in the README.");
+                return;
+            }
+            var editor = CodeEditorUI.Instance;
+            string problemText = editor != null ? editor.CurrentProblemText
+                : ProblemBoard.Instance != null ? ProblemBoard.Instance.CurrentProblemText : "";
+            if (string.IsNullOrEmpty(problemText))
+            {
+                speechBubble.ShowText("Open a code terminal first, then ask me for a hint.");
+                return;
+            }
             _hinting = true;
+            int session = _sessionVersion;
             MarkHandled();
-            PandaService.Instance.SendEvent("accepted");
-            _level = Mathf.Min(_level + 1, 3);
+            service.SendEvent("accepted");
+            int level = Mathf.Min(_level + 1, 3);
             speechBubble.ShowText("Hmm, let me take a look...");
 
-            string problemText = ProblemBoard.Instance != null ? ProblemBoard.Instance.CurrentProblemText : "";
-            PandaService.Instance.RequestHint(problemText, "", "", _level, _history, resp =>
+            service.RequestHint(problemText, editor != null ? editor.CurrentCode : "",
+                editor != null ? editor.CurrentTestResults : "", level, _history, resp =>
             {
+                if (this == null || session != _sessionVersion) return;
                 _hinting = false;
                 if (resp == null)
                 {
                     speechBubble.ShowText("Can't reach the backend. Is panda-service running?");
                     return;
                 }
+                _level = level;
                 _history.Add(resp.text);
                 string suffix = _level == 3 ? " (max)" : " (click again for more)";
                 speechBubble.ShowText(resp.text + "\n\nHint " + _level + "/3" + suffix);
-            });
+            }, editor != null ? editor.MinutesLeft : 36f);
         }
 
         void MarkHandled()
@@ -115,7 +138,7 @@ namespace Panda
 
         void HandleStatus(StatusResponse status)
         {
-            if (_hinting) return;
+            if (_hinting || !CodeEditorUI.IsOpen) return;
 
             if (status.offer != null)
             {

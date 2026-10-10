@@ -16,6 +16,7 @@ namespace Panda
 
         void Update()
         {
+            if (CodeEditorUI.IsOpen) return;
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
 
@@ -24,7 +25,9 @@ namespace Panda
 
             if (worldCamera == null) return;
 
-            Vector2 screenPos = Mouse.current.position.ReadValue();
+            Vector2 screenPos = Cursor.lockState == CursorLockMode.Locked
+                ? new Vector2(Screen.width / 2f, Screen.height / 2f)
+                : Mouse.current.position.ReadValue();
             Ray ray = worldCamera.ScreenPointToRay(screenPos);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f))
             {

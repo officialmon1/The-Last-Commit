@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "The-Last-Commit.slnx"
+    "dotnet.defaultSolution": "Lennys-Last-Commit.slnx"
 }

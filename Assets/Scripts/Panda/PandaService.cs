@@ -50,6 +50,8 @@ namespace Panda
                 return;
             }
             Instance = this;
+            // Keep local HTTP requests progressing when the game window loses focus.
+            Application.runInBackground = true;
             DontDestroyOnLoad(gameObject);
         }
 
@@ -60,7 +62,14 @@ namespace Panda
 
         IEnumerator Boot()
         {
-            if (launchBackendAutomatically)
+            // Reuse a manually started backend instead of launching a second server on the same port.
+            using (var req = UnityWebRequest.Get($"{BaseUrl}/health"))
+            {
+                req.timeout = 2;
+                yield return req.SendWebRequest();
+                BackendReady = req.result == UnityWebRequest.Result.Success;
+            }
+            if (!BackendReady && launchBackendAutomatically)
             {
                 string error = TryLaunchBackend();
                 if (error != null)
@@ -71,8 +80,8 @@ namespace Panda
                 }
             }
 
-            float waited = 0f;
-            while (waited < backendReadyTimeoutSeconds)
+            float deadline = Time.realtimeSinceStartup + backendReadyTimeoutSeconds;
+            while (!BackendReady && Time.realtimeSinceStartup < deadline)
             {
                 using (var req = UnityWebRequest.Get($"{BaseUrl}/health"))
                 {
@@ -81,13 +90,10 @@ namespace Panda
                     if (req.result == UnityWebRequest.Result.Success)
                     {
                         BackendReady = true;
-                        Debug.Log("[PandaService] Backend is up.");
-                        OnBackendReady?.Invoke();
                         break;
                     }
                 }
-                yield return new WaitForSeconds(0.3f);
-                waited += 0.3f;
+                yield return new WaitForSecondsRealtime(0.3f);
             }
 
             if (!BackendReady)
@@ -100,6 +106,9 @@ namespace Panda
                 yield break;
             }
 
+            Debug.Log("[PandaService] Backend is up.");
+            yield return PostJson("/event", "{\"type\":\"reset\"}", null);
+            OnBackendReady?.Invoke();
             if (autoEnableFaceTracking)
                 StartFaceTracking();
 
@@ -115,7 +124,7 @@ namespace Panda
             string projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
             if (projectRoot == null) return null;
             string candidate = Path.Combine(projectRoot, "panda-service");
-            return Directory.Exists(candidate) ? candidate : candidate; // return best guess either way; caller checks existence
+            return candidate;
         }
 
         string ResolvePythonExecutable(string backendFolder)
@@ -146,7 +155,7 @@ namespace Panda
             string python = ResolvePythonExecutable(backendFolder);
             if (python == null)
                 return $"couldn't find a python executable inside '{backendFolder}/.venv'. " +
-                       "Did you create the virtualenv per panda-service's README?";
+                       "Follow the Panda assistant setup in the project's README.";
 
             var psi = new ProcessStartInfo
             {
@@ -179,13 +188,26 @@ namespace Panda
 
         void OnApplicationQuit()
         {
-            if (BackendReady)
-                StopFaceTracking(); // best-effort, releases the webcam a little earlier
+            StopBackend();
+        }
 
-            if (_process != null && !_process.HasExited)
+        void OnDestroy()
+        {
+            if (Instance != this) return;
+            Instance = null;
+            StopBackend();
+        }
+
+        void StopBackend()
+        {
+            BackendReady = false;
+            if (_process == null) return;
+            try
             {
-                try { _process.Kill(); } catch { /* already gone */ }
+                if (!_process.HasExited) _process.Kill();
             }
+            catch (InvalidOperationException) { /* process never started or already exited */ }
+            finally { _process.Dispose(); _process = null; }
         }
 
         // ---------------- polling ----------------
@@ -193,7 +215,9 @@ namespace Panda
         {
             while (true)
             {
-                yield return PostJson("/status", "{\"idle_seconds\":0}", (ok, body) =>
+                float idle = CodeEditorUI.IsOpen ? CodeEditorUI.Instance.IdleSeconds : 0f;
+                string request = "{\"idle_seconds\":" + idle.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}";
+                yield return PostJson("/status", request, (ok, body) =>
                 {
                     if (ok)
                     {
@@ -201,20 +225,19 @@ namespace Panda
                         OnStatusUpdated?.Invoke(status);
                     }
                 });
-                yield return new WaitForSeconds(statusPollInterval);
+                yield return new WaitForSecondsRealtime(statusPollInterval);
             }
         }
 
         // ---------------- public API ----------------
         public void RequestHint(string problem, string code, string testResults, int level,
-            List<string> previousHints, Action<HintResponse> onDone)
+            List<string> previousHints, Action<HintResponse> onDone, float minutesLeft = 36f)
         {
-            string body = "{\"problem\":\"" + Json.Escape(problem) +
-                           "\",\"code\":\"" + Json.Escape(code) +
-                           "\",\"test_results\":\"" + Json.Escape(testResults) +
-                           "\",\"level\":" + level +
-                           ",\"previous_hints\":" + Json.StringArray(previousHints ?? new List<string>()) +
-                           "}";
+            string body = JsonUtility.ToJson(new HintRequest
+            {
+                problem = problem, code = code, test_results = testResults, level = level,
+                previous_hints = previousHints ?? new List<string>(), minutes_left = minutesLeft
+            });
             StartCoroutine(PostJson("/hint", body, (ok, resp) =>
             {
                 onDone?.Invoke(ok ? JsonUtility.FromJson<HintResponse>(resp) : null);
