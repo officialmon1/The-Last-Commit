@@ -1,0 +1,103 @@
+{
+  "schema": "lux3d.delivery-bundle/v1",
+  "createdAt": "2026-10-10T21:06:32+00:00",
+  "title": "The Amber Ruins — Panda",
+  "status": "incomplete",
+  "assetStatus": "complete",
+  "preview": {
+    "status": "generated",
+    "path": "preview.html",
+    "locale": "en"
+  },
+  "items": [
+    {
+      "id": "panda",
+      "label": "The Amber Ruins Panda",
+      "attemptIds": [
+        "panda-unity-model-01"
+      ],
+      "selectedAttemptId": "panda-unity-model-01",
+      "artifactIds": [
+        "panda-unity-model-01:zip",
+        "panda-unity-model-01:glb"
+      ],
+      "status": "complete"
+    }
+  ],
+  "attempts": [
+    {
+      "id": "panda-unity-model-01",
+      "taskRef": "international:4043188",
+      "status": "succeeded",
+      "localStartedAt": "2026-10-10T20:58:23.096241+00:00",
+      "localUpdatedAt": "2026-10-10T21:06:29.448040+00:00",
+      "localCompletedAt": "2026-10-10T21:06:29.448040+00:00",
+      "localDurationMs": 486351,
+      "artifactIds": [
+        "panda-unity-model-01:zip",
+        "panda-unity-model-01:glb"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "international:4043188",
+      "taskId": "4043188",
+      "region": "international",
+      "operation": "image-to-3d",
+      "version": "G1",
+      "providerStatus": 3,
+      "createdAt": null,
+      "creationSources": [],
+      "durationMs": null,
+      "actualCredits": {
+        "status": "unavailable",
+        "value": null,
+        "source": null
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "assets/panda-unity-model-01/zip.zip",
+      "format": "zip",
+      "size": 10625052,
+      "sha256": "a05bcfb9a44cd5b88a4a982c267a4bc44765bd4c7385b1ce3494e07b9694a0ae",
+      "validation": {
+        "valid": true,
+        "zipEntries": 7,
+        "modelEntries": [
+          "MODEL.glb"
+        ]
+      },
+      "id": "panda-unity-model-01:zip",
+      "attemptId": "panda-unity-model-01",
+      "taskRef": "international:4043188"
+    },
+    {
+      "path": "assets/panda-unity-model-01/glb.glb",
+      "format": "glb",
+      "size": 10491472,
+      "sha256": "857a83f682ae1fb4c4819336372169b2a468119e3cc5ac85656d9a37f22e75b6",
+      "validation": {
+        "valid": true,
+        "glbVersion": 2,
+        "assetVersion": "2.0",
+        "scenes": 1,
+        "nodes": 1,
+        "meshes": 1,
+        "materials": 1
+      },
+      "id": "panda-unity-model-01:glb",
+      "attemptId": "panda-unity-model-01",
+      "taskRef": "international:4043188"
+    }
+  ],
+  "credits": {
+    "status": "incomplete",
+    "total": null
+  },
+  "scene": {
+    "status": "not-requested"
+  }
+}
