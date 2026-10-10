@@ -1,0 +1,3 @@
+{
+  "connectionString": "postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+}
