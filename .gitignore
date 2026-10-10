@@ -112,7 +112,3 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
-
-# Neon 连接串（含密码），每人自己从 neon.example.json 复制一份
-Assets/StreamingAssets/neon.json
-Assets/StreamingAssets/neon.json.meta

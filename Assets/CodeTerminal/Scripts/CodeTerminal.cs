@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class CodeTerminal : MonoBehaviour
 {
-    [Tooltip("Neon problems 表里的 track（同 track 的题按 stage 排成一串关卡）")] public string track = "dijkstra";
+    [Tooltip("Resources/Tracks/<track>.json 里的关卡链")] public string track = "dijkstra";
     public float interactDistance = 3f;
     public string hint = "Press E to use the terminal";
 

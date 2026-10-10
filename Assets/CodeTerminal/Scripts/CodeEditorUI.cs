@@ -1,38 +1,38 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
-/// <summary>一道题。字段名 = Neon problems 表的列名（JsonUtility 直接解析 row_to_json 的结果）。</summary>
+/// <summary>一道题。数据来自 Resources/Tracks/&lt;track&gt;.json（字段名要和 JSON 一致）。</summary>
 [Serializable]
 public class Problem
 {
-    public int id;
+    public int stage = 1;
     public string slug;
     public string title;
     public string description;
     public string stdin = "";
     public string expected_output = "";
     public string starter_code = "";
-    public int time_limit_seconds = 300;
-    public int run_timeout_seconds = 5;
-    public string track = "";
-    public int stage = 1;
     public string sample_input = "";
     public string sample_output = "";
+    public int run_timeout_seconds = 5;
 }
 
 /// <summary>
 /// 屏幕右侧的 Python 编辑器面板（朴素的 uGUI，运行时自己搭出来，不依赖预制体）。
 ///
-/// 一个终端对应一条「关卡链」(track)：problems 表里 track 相同的题按 stage 排成一串，
+/// 一个终端对应一条「关卡链」(track)：Resources/Tracks/&lt;track&gt;.json 里的题按 stage 排成一串，
 /// 前面的关过了才解锁下一关；最后一关是 Boss。子关的读入/输出都写好了，玩家只补 TODO；
 /// Boss 从零写，并且可以用 Ref 按钮调出自己前几关通过的代码（看 / 一键插进编辑器）。
-/// 进度直接从 submissions 表算（本玩家、passed = true），本局内也有缓存，所以没配 Neon 也能玩一局。
+///
+/// 存档全在本机：Application.persistentDataPath/save_&lt;track&gt;.json
+/// （通过了哪些关、每关当前代码和输入、通过时的代码、总计时用掉多少秒）。
+/// 第一次打开终端时如果有存档，会问「Continue / New game」。
 ///
 /// 用法：<c>CodeEditorUI.Instance.Open("dijkstra")</c>。Esc 关闭，Ctrl+Enter 用自己的 Input 跑，Submit 用隐藏输入判定。
 /// </summary>
@@ -45,57 +45,53 @@ public class CodeEditorUI : MonoBehaviour
     /// <summary>总时间用完时触发一次（参数 = track）。花瓣死亡演出接的就是它。</summary>
     public static event Action<string> TrackTimeUp;
 
-    [Tooltip("写进 submissions.player；留空用系统用户名")] public string playerName = "";
-    [Tooltip("整条关卡链的总时间（秒）。计时从第一次打开终端开始，游戏运行期间一直走，退出游戏暂停，存在 Neon 的 runs 表里")]
+    [Tooltip("整条关卡链的总时间（秒）。计时从第一次打开终端开始，游戏运行期间一直走，退出游戏暂停，存在本机存档里")]
     public int trackTimeLimitSeconds = 36 * 60;
     public int fontSize = 18;
     [Tooltip("整体 UI 缩放（1 = 按真实像素渲染，字最清楚）")] public float uiScale = 1f;
+    [Tooltip("调试：按这个键直接把时间用完（看死亡演出用）")] public Key debugTimeUpKey = Key.F9;
 
-    GameObject _root, _refRoot, _refBar;
-    CanvasScaler _scaler;
-    int _lastScreenH;
-    Text _title, _timerLabel, _problemText, _output, _status, _refTitle;
+    GameObject _root, _refRoot, _refBar, _choiceRoot;
+    Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText;
     InputField _code, _stdin, _refField;
     Button _runBtn, _submitBtn;
     Transform _stageBar;
     Font _mono, _ui;
+    CanvasScaler _scaler;
+    int _lastScreenH;
+    CodeInputHelper _codeHelper, _stdinHelper;
 
     // 当前关卡链
     string _track;
     List<Problem> _problems = new List<Problem>();
     int _current = -1;
     Problem _problem => _current >= 0 && _current < _problems.Count ? _problems[_current] : null;
-    readonly HashSet<int> _passed = new HashSet<int>();                 // 通过的 problem id
-    readonly Dictionary<int, string> _passedCode = new Dictionary<int, string>();
-    readonly List<Button> _stageBtns = new List<Button>();
-    string _shownSlug;   // 编辑器里当前显示的是哪道题的代码（切题/关闭时按它缓存）
-
-    bool _running;
-    CodeInputHelper _codeHelper, _stdinHelper;
-    [Tooltip("调试：按这个键直接把时间用完（看死亡演出用）")] public Key debugTimeUpKey = Key.F9;
-
-    // 整条关卡链的计时（runs 表一行：device_id + track）
-    string _deviceId;
-    float _runElapsed, _saveTimer;
-    int _runLimit;
-    bool _runStarted, _runCompleted, _timeUpFired;
+    readonly HashSet<string> _passed = new HashSet<string>();                 // 通过的 slug
+    readonly Dictionary<string, string> _passedCode = new Dictionary<string, string>();
     readonly Dictionary<string, string> _codeCache = new Dictionary<string, string>();
     readonly Dictionary<string, string> _stdinCache = new Dictionary<string, string>();
+    readonly List<Button> _stageBtns = new List<Button>();
+    string _shownSlug;   // 编辑器里当前显示的是哪道题的代码（切题/关闭时按它缓存）
+    bool _running;
 
-    float SecondsLeft => _runStarted ? Mathf.Max(0f, _runLimit - _runElapsed) : trackTimeLimitSeconds;
+    // 整条关卡链的计时
+    float _runElapsed, _saveTimer;
+    bool _runStarted, _runCompleted, _timeUpFired;
+
+    float SecondsLeft => Mathf.Max(0f, trackTimeLimitSeconds - _runElapsed);
     bool TimeUp => _runStarted && SecondsLeft <= 0f;
-    bool IsUnlocked(int i) => i == 0 || (i > 0 && i < _problems.Count && _passed.Contains(_problems[i - 1].id));
+    bool IsUnlocked(int i) => i == 0 || (i > 0 && i < _problems.Count && _passed.Contains(_problems[i - 1].slug));
+    string SavePath => Path.Combine(Application.persistentDataPath, "save_" + _track + ".json");
 
     void Awake()
     {
         Instance = this;
-        if (string.IsNullOrEmpty(playerName)) playerName = Environment.UserName;
-        _deviceId = SystemInfo.deviceUniqueIdentifier;   // 机器码：每台电脑一份进度，不用登录
         _mono = OsFont(new[] { "Consolas", "Cascadia Mono", "Courier New" }, fontSize);
         _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "微软雅黑", "Arial" }, fontSize);
         BuildUI();
         _root.SetActive(false);
         _refRoot.SetActive(false);
+        _choiceRoot.SetActive(false);
         PythonRunner.Init();
     }
 
@@ -111,7 +107,7 @@ public class CodeEditorUI : MonoBehaviour
     {
         FitScale();
         TickRun();
-        if (!IsOpen) return;
+        if (!IsOpen || _choiceRoot.activeSelf) return;
         var kb = Keyboard.current;
         if (kb != null)
         {
@@ -142,33 +138,73 @@ public class CodeEditorUI : MonoBehaviour
 
     // ------------------------------------------------------------------ 打开 / 关闭 / 选关
 
-    public async void Open(string track)
+    public void Open(string track)
     {
         if (IsOpen) return;
         _root.SetActive(true);
         SetPlayerLocked(true);
-        _status.text = "Loading…";
         _output.text = "";
 
         if (_track != track)
         {
-            var list = await LoadTrack(track);
-            if (!IsOpen) return;   // 读取期间被关掉了
             _track = track;
-            _problems = list;
-            _passed.Clear();
-            _passedCode.Clear();
-            await LoadProgress();
-            if (!IsOpen) return;
-            await LoadRun();
-            if (!IsOpen) return;
-            // 默认停在第一个没通过的已解锁关，全过了就停在 Boss
-            _current = -1;
-            for (int i = 0; i < _problems.Count; i++) if (IsUnlocked(i) && !_passed.Contains(_problems[i].id)) { _current = i; break; }
-            if (_current < 0) _current = _problems.Count - 1;
+            _problems = LoadTrack(track);
+            RebuildStageBar();
+            var save = LoadSave();
+            if (save != null && (save.passed.Count > 0 || save.elapsedSeconds > 1f))
+            {
+                // 有存档：先问继续还是重来
+                int left = Mathf.Max(0, trackTimeLimitSeconds - Mathf.CeilToInt(save.elapsedSeconds));
+                _choiceText.text = $"Saved game found: {save.passed.Count}/{_problems.Count} stages cleared, {left / 60:00}:{left % 60:00} left.";
+                _choiceRoot.SetActive(true);
+                _pendingSave = save;
+                return;
+            }
+            StartFresh();
         }
-        RebuildStageBar();
         SelectStage(_current);
+    }
+
+    SaveData _pendingSave;
+
+    void ChooseContinue()
+    {
+        _choiceRoot.SetActive(false);
+        ApplySave(_pendingSave);
+        _pendingSave = null;
+        PickDefaultStage();
+        SelectStage(_current);
+    }
+
+    void ChooseNewGame()
+    {
+        _choiceRoot.SetActive(false);
+        _pendingSave = null;
+        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch (Exception e) { Debug.LogWarning("CodeEditorUI: 删除存档失败：" + e.Message); }
+        StartFresh();
+        SelectStage(_current);
+    }
+
+    void StartFresh()
+    {
+        _passed.Clear();
+        _passedCode.Clear();
+        _codeCache.Clear();
+        _stdinCache.Clear();
+        _runElapsed = 0f;
+        _runCompleted = false;
+        _timeUpFired = false;
+        _runStarted = true;
+        _shownSlug = null;
+        PickDefaultStage();
+    }
+
+    // 默认停在第一个没通过的已解锁关，全过了就停在 Boss
+    void PickDefaultStage()
+    {
+        _current = -1;
+        for (int i = 0; i < _problems.Count; i++) if (IsUnlocked(i) && !_passed.Contains(_problems[i].slug)) { _current = i; break; }
+        if (_current < 0) _current = _problems.Count - 1;
     }
 
     void SelectStage(int i)
@@ -185,8 +221,8 @@ public class CodeEditorUI : MonoBehaviour
         _stdin.text = _stdinCache.TryGetValue(p.slug, out var cachedIn) ? cachedIn : p.sample_input;
         _output.text = "";
         _refRoot.SetActive(false);
-        _status.text = _passed.Contains(p.id) ? "Already accepted. You can still re-run or improve it."
-            : NeonDb.Available ? "Run uses the Input box.  Submit judges with hidden input." : "Run uses the Input box.  Submit judges.  (Neon not configured: progress is not saved)";
+        _status.text = _passed.Contains(p.slug) ? "Already accepted. You can still re-run or improve it."
+            : "Run uses the Input box.  Submit judges with hidden input.";
         RefreshStageBar();
         _codeHelper.ResetHistory();
         _stdinHelper.ResetHistory();
@@ -196,11 +232,12 @@ public class CodeEditorUI : MonoBehaviour
 
     public void Close()
     {
+        if (_choiceRoot.activeSelf) return;   // 还没选继续/重开，不让关
         if (_shownSlug != null) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
         _root.SetActive(false);
         _refRoot.SetActive(false);
         SetPlayerLocked(false);
-        SaveRun();
+        SaveLocal();
     }
 
     void SetPlayerLocked(bool locked)
@@ -210,84 +247,83 @@ public class CodeEditorUI : MonoBehaviour
         else { Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked; Cursor.visible = locked; }
     }
 
-    static async Task<List<Problem>> LoadTrack(string track)
+    // ------------------------------------------------------------------ 题目（Resources/Tracks/<track>.json）
+
+    [Serializable] class TrackFile { public List<Problem> problems = new List<Problem>(); }
+
+    static List<Problem> LoadTrack(string track)
     {
-        var list = new List<Problem>();
-        if (NeonDb.Available)
+        var asset = Resources.Load<TextAsset>("Tracks/" + track);
+        if (asset != null)
         {
-            try
-            {
-                foreach (var j in await NeonDb.Query("select row_to_json(p)::text as j from problems p where track = $1 order by stage, id", track))
-                    list.Add(JsonUtility.FromJson<Problem>(j));
-            }
-            catch (Exception e) { Debug.LogWarning("CodeEditorUI: 读取题目失败：" + e.Message); }
+            var list = JsonUtility.FromJson<TrackFile>(asset.text).problems;
+            list.Sort((a, b) => a.stage.CompareTo(b.stage));
+            if (list.Count > 0) return list;
         }
-        if (list.Count == 0)
+        Debug.LogWarning($"CodeEditorUI: 没找到 Resources/Tracks/{track}.json 或里面没有题，用内置示例题。");
+        return new List<Problem>
         {
-            Debug.LogWarning($"CodeEditorUI: track '{track}' 没有题（或 Neon 不可用），用内置示例题。");
-            list.Add(new Problem
+            new Problem
             {
-                id = -1, slug = "builtin-a-plus-b", track = track, stage = 1,
+                slug = "builtin-a-plus-b", stage = 1,
                 title = "A + B (built-in fallback)",
-                description = "Read two integers a and b from standard input (separated by a space) and print their sum.\n\nExample\nInput:  3 5\nOutput: 8",
-                stdin = "17 25\n", expected_output = "42\n", starter_code = "",
-            });
-        }
-        return list;
+                description = "Read two integers a and b from standard input (separated by a space) and print their sum.",
+                stdin = "17 25\n", expected_output = "42\n", sample_input = "3 5\n", sample_output = "8\n",
+            }
+        };
     }
 
-    [Serializable] class PassedRow { public int problem_id; public string code; }
+    // ------------------------------------------------------------------ 本机存档
 
-    async Task LoadProgress()
+    [Serializable] class Entry { public string slug; public string text; }
+    [Serializable]
+    class SaveData
     {
-        if (!NeonDb.Available) return;
+        public float elapsedSeconds;
+        public bool completed;
+        public List<string> passed = new List<string>();
+        public List<Entry> passedCode = new List<Entry>();
+        public List<Entry> code = new List<Entry>();
+        public List<Entry> stdin = new List<Entry>();
+    }
+
+    SaveData LoadSave()
+    {
         try
         {
-            var rows = await NeonDb.Query(
-                "select row_to_json(t)::text as j from (select distinct on (s.problem_id) s.problem_id, s.code from submissions s join problems p on p.id = s.problem_id where p.track = $1 and s.device_id = $2 and s.passed order by s.problem_id, s.created_at desc) t",
-                _track, _deviceId);
-            foreach (var j in rows)
-            {
-                var r = JsonUtility.FromJson<PassedRow>(j);
-                _passed.Add(r.problem_id);
-                _passedCode[r.problem_id] = r.code;
-            }
+            if (!File.Exists(SavePath)) return null;
+            return JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
         }
-        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 读取进度失败：" + e.Message); }
+        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 读取存档失败：" + e.Message); return null; }
     }
 
-    // ------------------------------------------------------------------ 总计时（runs 表）
-
-    [Serializable] class RunRow { public int time_limit_seconds; public float elapsed_seconds; public string completed_at; }
-
-    async Task LoadRun()
+    void ApplySave(SaveData s)
     {
-        _runLimit = trackTimeLimitSeconds;
-        _runElapsed = 0f;
-        _runCompleted = false;
-        _timeUpFired = false;
-        _saveTimer = 0f;
-        if (NeonDb.Available)
-        {
-            try
-            {
-                var rows = await NeonDb.Query("select row_to_json(r)::text as j from runs r where device_id = $1 and track = $2", _deviceId, _track);
-                if (rows.Count > 0)
-                {
-                    var r = JsonUtility.FromJson<RunRow>(rows[0]);
-                    _runLimit = r.time_limit_seconds;
-                    _runElapsed = r.elapsed_seconds;
-                    _runCompleted = !string.IsNullOrEmpty(r.completed_at);
-                }
-                else
-                {
-                    await NeonDb.Exec("insert into runs (device_id, player, track, time_limit_seconds) values ($1, $2, $3, $4::int)", _deviceId, playerName, _track, _runLimit.ToString());
-                }
-            }
-            catch (Exception e) { Debug.LogWarning("CodeEditorUI: 读取计时失败：" + e.Message); }
-        }
-        _runStarted = true;
+        StartFresh();
+        _runElapsed = s.elapsedSeconds;
+        _runCompleted = s.completed;
+        foreach (var slug in s.passed) _passed.Add(slug);
+        foreach (var e in s.passedCode) _passedCode[e.slug] = e.text;
+        foreach (var e in s.code) _codeCache[e.slug] = e.text;
+        foreach (var e in s.stdin) _stdinCache[e.slug] = e.text;
     }
+
+    void SaveLocal()
+    {
+        if (!_runStarted) return;
+        if (_shownSlug != null && IsOpen) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
+        var s = new SaveData { elapsedSeconds = _runElapsed, completed = _runCompleted };
+        s.passed.AddRange(_passed);
+        foreach (var kv in _passedCode) s.passedCode.Add(new Entry { slug = kv.Key, text = kv.Value });
+        foreach (var kv in _codeCache) s.code.Add(new Entry { slug = kv.Key, text = kv.Value });
+        foreach (var kv in _stdinCache) s.stdin.Add(new Entry { slug = kv.Key, text = kv.Value });
+        try { File.WriteAllText(SavePath, JsonUtility.ToJson(s, true)); }
+        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 写存档失败：" + e.Message); }
+    }
+
+    void OnApplicationQuit() => SaveLocal();
+
+    // ------------------------------------------------------------------ 总计时
 
     /// <summary>复活后调用：重新给一整段时间（通关记录保留）。</summary>
     public void RestartRun()
@@ -296,42 +332,25 @@ public class CodeEditorUI : MonoBehaviour
         _runElapsed = 0f;
         _timeUpFired = false;
         _runCompleted = false;
-        SaveRun();
+        SaveLocal();
     }
 
     // 游戏运行期间一直走，面板关着也走；时间到只触发一次 TrackTimeUp
     void TickRun()
     {
-        if (!_runStarted || _runCompleted) return;
-        if (Keyboard.current != null && Keyboard.current[debugTimeUpKey].wasPressedThisFrame) _runElapsed = _runLimit;
+        if (!_runStarted || _runCompleted || _choiceRoot.activeSelf) return;
+        if (Keyboard.current != null && Keyboard.current[debugTimeUpKey].wasPressedThisFrame) _runElapsed = trackTimeLimitSeconds;
         if (TimeUp)
         {
             if (_timeUpFired) return;
             _timeUpFired = true;
-            SaveRun();
+            SaveLocal();
             TrackTimeUp?.Invoke(_track);
             return;
         }
         _runElapsed += Time.unscaledDeltaTime;
         _saveTimer += Time.unscaledDeltaTime;
-        if (_saveTimer >= 5f) { _saveTimer = 0f; SaveRun(); }
-    }
-
-    const string SaveRunSql = "update runs set elapsed_seconds = $1::real, updated_at = now(), completed_at = case when $2::boolean then now() else completed_at end where device_id = $3 and track = $4";
-
-    string[] SaveRunArgs(bool completed) => new[] { _runElapsed.ToString("F1", System.Globalization.CultureInfo.InvariantCulture), completed ? "true" : "false", _deviceId, _track };
-
-    async void SaveRun(bool completed = false)
-    {
-        if (!NeonDb.Available || !_runStarted) return;
-        try { await NeonDb.Exec(SaveRunSql, SaveRunArgs(completed)); }
-        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 保存计时失败：" + e.Message); }
-    }
-
-    void OnApplicationQuit()
-    {
-        // 退出时同步写一次，最多等 2 秒
-        if (NeonDb.Available && _runStarted) NeonDb.ExecBlocking(SaveRunSql, 2000, SaveRunArgs(_runCompleted));
+        if (_saveTimer >= 10f) { _saveTimer = 0f; SaveLocal(); }
     }
 
     void OnGUI()
@@ -359,8 +378,7 @@ public class CodeEditorUI : MonoBehaviour
         {
             int idx = i;
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
-            var b = MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), Color.gray);
-            _stageBtns.Add(b);
+            _stageBtns.Add(MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), Color.gray));
         }
         // Ref 按钮：查看自己前几关通过的代码
         ClearChildren(_refBar.transform);
@@ -379,13 +397,12 @@ public class CodeEditorUI : MonoBehaviour
         for (int i = 0; i < _stageBtns.Count; i++)
         {
             var b = _stageBtns[i];
-            bool passed = _passed.Contains(_problems[i].id);
+            bool passed = _passed.Contains(_problems[i].slug);
             bool unlocked = IsUnlocked(i);
             b.interactable = unlocked;
             b.targetGraphic.color = i == _current ? new Color(0.25f, 0.45f, 0.7f) : passed ? new Color(0.2f, 0.55f, 0.35f) : unlocked ? new Color(0.35f, 0.35f, 0.4f) : new Color(0.2f, 0.2f, 0.22f);
-            var t = b.GetComponentInChildren<Text>();
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
-            t.text = (boss ? "BOSS" : $"{i + 1}") + (passed ? " ✓" : unlocked ? "" : " 🔒");
+            b.GetComponentInChildren<Text>().text = (boss ? "BOSS" : $"{i + 1}") + (passed ? " ✓" : unlocked ? "" : " 🔒");
         }
         // Ref 栏永远占着位置（布局固定），每个 Ref 只有通过了、且在当前关之前才能点
         int k = 0;
@@ -393,7 +410,7 @@ public class CodeEditorUI : MonoBehaviour
         {
             var b = c.GetComponent<Button>();
             if (b == null) continue;
-            b.interactable = k < _current && _passed.Contains(_problems[k].id);
+            b.interactable = k < _current && _passed.Contains(_problems[k].slug);
             k++;
         }
     }
@@ -403,15 +420,14 @@ public class CodeEditorUI : MonoBehaviour
         var p = _problems[stageIndex];
         _refRoot.SetActive(true);
         _refTitle.text = p.title;
-        _refField.text = _passedCode.TryGetValue(p.id, out var code) ? code : "(not solved yet)";
+        _refField.text = _passedCode.TryGetValue(p.slug, out var code) ? code : "(not solved yet)";
     }
 
     void InsertReference()
     {
         if (!_refRoot.activeSelf) return;
-        string t = _code.text;
         string block = "\n# ---- from: " + _refTitle.text + " ----\n" + _refField.text + "\n";
-        _code.text = t.TrimEnd() + "\n" + block;
+        _code.text = _code.text.TrimEnd() + "\n" + block;
         _refRoot.SetActive(false);
         _code.ActivateInputField();
         _codeHelper.MoveCaretToEnd();
@@ -419,7 +435,7 @@ public class CodeEditorUI : MonoBehaviour
 
     // ------------------------------------------------------------------ 运行
 
-    /// <summary>submit = false：用玩家自己填的 Input 跑，只看输出。submit = true：用题目的隐藏输入跑并判定、存库、解锁下一关。</summary>
+    /// <summary>submit = false：用玩家自己填的 Input 跑，只看输出。submit = true：用题目的隐藏输入跑并判定、解锁下一关。</summary>
     async void RunCode(bool submit)
     {
         if (_running || _problem == null || (submit && TimeUp)) return;
@@ -429,7 +445,6 @@ public class CodeEditorUI : MonoBehaviour
         _output.text = "";
         string code = _code.text;
         _codeCache[problem.slug] = code;
-        int secondsLeft = Mathf.CeilToInt(SecondsLeft);
 
         var r = await PythonRunner.RunAsync(code, submit ? problem.stdin : _stdin.text, Mathf.Max(1, problem.run_timeout_seconds));
         if (this == null) return;
@@ -457,28 +472,19 @@ public class CodeEditorUI : MonoBehaviour
         bool passed = !r.timedOut && r.exitCode == 0 && Normalize(r.stdout) == Normalize(problem.expected_output);
         if (passed)
         {
-            bool first = _passed.Add(problem.id);
-            _passedCode[problem.id] = code;
+            bool first = _passed.Add(problem.slug);
+            _passedCode[problem.slug] = code;
             bool isBoss = _current == _problems.Count - 1;
             _status.text = isBoss ? $"✓ Accepted   {r.runMs} ms   —   BOSS cleared, track complete!"
                 : $"✓ Accepted   {r.runMs} ms   —   Stage {_current + 2} unlocked";
             RefreshStageBar();
-            if (isBoss && first) { _runCompleted = true; SaveRun(completed: true); TrackCompleted?.Invoke(_track); }
+            if (isBoss) _runCompleted = true;
+            SaveLocal();
+            if (isBoss && first) TrackCompleted?.Invoke(_track);
         }
         else
         {
             _status.text = r.timedOut ? "✗ Time limit exceeded" : r.exitCode != 0 ? $"✗ Runtime error (exit {r.exitCode})   {r.runMs} ms" : $"✗ Wrong answer   {r.runMs} ms";
-        }
-
-        if (NeonDb.Available && problem.id > 0)
-        {
-            try
-            {
-                await NeonDb.Exec(
-                    "insert into submissions (problem_id, player, device_id, code, stdout, stderr, passed, timed_out, run_ms, seconds_left) values ($1::int, $2, $3, $4, $5, $6, $7::boolean, $8::boolean, $9::int, $10::int)",
-                    problem.id.ToString(), playerName, _deviceId, code, r.stdout, r.stderr, passed ? "true" : "false", r.timedOut ? "true" : "false", r.runMs.ToString(), secondsLeft.ToString());
-            }
-            catch (Exception e) { Debug.LogWarning("CodeEditorUI: 保存提交失败：" + e.Message); }
         }
     }
 
@@ -513,7 +519,7 @@ public class CodeEditorUI : MonoBehaviour
         _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
         _scaler.scaleFactor = uiScale;
 
-        // ---------- 右侧主面板 ----------
+        // ---------- 右侧主面板（每块高度固定，内容多了在块内滚） ----------
         var panel = Panel("Panel", canvasGo.transform, new Color(0.11f, 0.12f, 0.14f, 0.96f));
         _root = panel.gameObject;
         var prt = panel.rectTransform;
@@ -537,17 +543,15 @@ public class CodeEditorUI : MonoBehaviour
         // 关卡栏
         _stageBar = Row("Stages", panel.transform, fontSize * 2);
 
-        // 题目描述
+        // 题目描述（可滚）
         var descBox = Panel("Problem", panel.transform, new Color(0.16f, 0.17f, 0.2f));
         Fix(descBox.gameObject, fontSize * 9f);
         _problemText = ScrollableText(descBox, _ui, fontSize - 1, new Color(0.9f, 0.9f, 0.9f));
 
-        // 代码框
+        // 代码框（固定 18 行高，多了上下滚）
         _code = MakeInputField("Code", panel.transform, "# write Python here");
         _codeHelper = _code.gameObject.AddComponent<CodeInputHelper>();
-        var codeLe = _code.gameObject.AddComponent<LayoutElement>();
-        codeLe.preferredHeight = codeLe.minHeight = fontSize * 18;   // 代码框也固定 18 行高，多了就上下滚（1080p 正好放得下整个面板）
-        codeLe.flexibleHeight = 0;
+        Fix(_code.gameObject, fontSize * 18);
 
         // 玩家自己的输入（stdin）
         var inLabel = Label("InputLabel", panel.transform, _ui, fontSize - 3, new Color(0.7f, 0.7f, 0.7f), TextAnchor.LowerLeft);
@@ -574,6 +578,25 @@ public class CodeEditorUI : MonoBehaviour
         _refBar = Row("RefBar", panel.transform, fontSize * 1.8f).gameObject;
         _status = Label("Status", panel.transform, _ui, fontSize - 1, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
         Fix(_status.gameObject, fontSize * 1.5f);
+
+        // ---------- 继续 / 重新开始（盖在主面板上） ----------
+        var choice = Panel("Choice", canvasGo.transform, new Color(0.08f, 0.09f, 0.11f, 0.98f));
+        _choiceRoot = choice.gameObject;
+        var crt = choice.rectTransform;
+        crt.anchorMin = new Vector2(0.53f, 0.38f);
+        crt.anchorMax = new Vector2(0.985f, 0.62f);
+        crt.offsetMin = crt.offsetMax = Vector2.zero;
+        var cvl = choice.gameObject.AddComponent<VerticalLayoutGroup>();
+        cvl.padding = new RectOffset(24, 24, 20, 20);
+        cvl.spacing = 16;
+        cvl.childControlWidth = cvl.childControlHeight = true;
+        cvl.childForceExpandWidth = true;
+        cvl.childForceExpandHeight = false;
+        _choiceText = Label("Text", choice.transform, _ui, fontSize + 2, Color.white, TextAnchor.MiddleCenter);
+        _choiceText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
+        var cbar = Row("Bar", choice.transform, fontSize * 2.4f);
+        MakeButton("Continue", cbar, "Continue", ChooseContinue, new Color(0.2f, 0.55f, 0.35f));
+        MakeButton("New", cbar, "New game", ChooseNewGame, new Color(0.6f, 0.3f, 0.3f));
 
         // ---------- 左侧参考代码面板 ----------
         var refPanel = Panel("ReferencePanel", canvasGo.transform, new Color(0.1f, 0.1f, 0.13f, 0.96f));
@@ -638,7 +661,7 @@ public class CodeEditorUI : MonoBehaviour
         return t;
     }
 
-    /// <summary>在一个 Image 里放一段可以用滚轮滚动的文字（题面太长时用）。</summary>
+    /// <summary>在一个 Image 里放一段可以用滚轮滚动的文字（题面、输出）。</summary>
     static Text ScrollableText(Image box, Font font, int size, Color color)
     {
         var scroll = box.gameObject.AddComponent<ScrollRect>();
@@ -663,7 +686,7 @@ public class CodeEditorUI : MonoBehaviour
         return t;
     }
 
-    /// <summary>固定高度：最小 = 期望，布局再挤也不会被压扁。</summary>
+    /// <summary>固定高度：最小 = 期望，伸缩 0，布局再挤也不会变。</summary>
     static void Fix(GameObject go, float h)
     {
         var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
@@ -681,7 +704,7 @@ public class CodeEditorUI : MonoBehaviour
 
     InputField MakeInputField(string name, Transform parent, string placeholder)
     {
-        // 结构：框(Image + InputField + 只认滚轮的 ScrollRect) → Viewport(RectMask2D) → Text(高度随内容撑开) + Placeholder
+        // 结构：框(Image + InputField + 只认滚轮的 ScrollRect) → Viewport(RectMask2D) → Text(高度由 CodeInputHelper 按完整文本算) + Placeholder
         var bg = Panel(name, parent, new Color(0.07f, 0.08f, 0.09f));
         var field = bg.gameObject.AddComponent<InputField>();
         var scroll = bg.gameObject.AddComponent<WheelOnlyScrollRect>();
@@ -695,7 +718,7 @@ public class CodeEditorUI : MonoBehaviour
         trt.anchorMin = new Vector2(0f, 1f);
         trt.anchorMax = new Vector2(1f, 1f);
         trt.pivot = new Vector2(0f, 1f);
-        trt.offsetMin = trt.offsetMax = Vector2.zero;   // 高度由 CodeInputHelper 按完整文本算
+        trt.offsetMin = trt.offsetMax = Vector2.zero;
         var ph = Label("Placeholder", viewport.transform, _mono, fontSize, new Color(0.5f, 0.5f, 0.5f), TextAnchor.UpperLeft);
         ph.text = placeholder;
         Stretch(ph.rectTransform, 0);
