@@ -156,6 +156,12 @@ def event(req: EventRequest):
 
 
 # ---------------- page ----------------
+@app.get("/health")
+def health():
+    """Unity polls this on launch to know the backend subprocess is ready."""
+    return {"ok": True}
+
+
 @app.get("/")
 def index():
     return FileResponse("static/index.html")
