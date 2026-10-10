@@ -27,6 +27,7 @@ namespace Panda
         long _currentOfferId = -1;
         long _handledId = 0;
         bool _hinting;
+        bool _backendFailed;
         int _sessionVersion;
 
         void Awake()
@@ -38,13 +39,34 @@ namespace Panda
         {
             _basePos = transform.position;
             if (PandaService.Instance != null)
+            {
                 PandaService.Instance.OnStatusUpdated += HandleStatus;
+                PandaService.Instance.OnBackendReady += HandleBackendReady;
+                PandaService.Instance.OnBackendFailed += HandleBackendFailed;
+                if (!PandaService.Instance.BackendReady) speechBubble.ShowText("Panda is loading...");
+            }
         }
 
         void OnDestroy()
         {
             if (PandaService.Instance != null)
+            {
                 PandaService.Instance.OnStatusUpdated -= HandleStatus;
+                PandaService.Instance.OnBackendReady -= HandleBackendReady;
+                PandaService.Instance.OnBackendFailed -= HandleBackendFailed;
+            }
+        }
+
+        void HandleBackendReady()
+        {
+            _backendFailed = false;
+            if (!_hinting && _history.Count == 0) speechBubble.Clear();
+        }
+
+        void HandleBackendFailed(string error)
+        {
+            _backendFailed = true;
+            speechBubble.ShowText("Panda couldn't connect. Reopen the game to try again.");
         }
 
         void Update()
@@ -95,7 +117,8 @@ namespace Panda
             var service = PandaService.Instance;
             if (service == null || !service.BackendReady)
             {
-                speechBubble.ShowText("Panda is unavailable. Check the assistant setup in the README.");
+                speechBubble.ShowText(service == null || _backendFailed
+                    ? "Panda couldn't connect. Reopen the game to try again." : "Panda is loading...");
                 return;
             }
             var editor = CodeEditorUI.Instance;

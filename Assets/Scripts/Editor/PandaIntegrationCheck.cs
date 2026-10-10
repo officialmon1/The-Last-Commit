@@ -31,10 +31,23 @@ namespace PandaEditor
         [MenuItem("Tools/Panda/Check integration (Play mode)")]
         static async void RunMenu() => Debug.Log(await Run());
 
+        [MenuItem("Tools/Panda/Check local backend paths")]
+        public static void CheckBackendPaths()
+        {
+            var find = typeof(PandaService).GetMethod("FindBackendFolder", BindingFlags.Static | BindingFlags.NonPublic);
+            var project = Directory.GetParent(Application.dataPath).FullName;
+            var expected = Path.Combine(project, "panda-service");
+            foreach (var path in new[] { Application.dataPath, Path.Combine(project, "Builds", "Game_Data"),
+                Path.Combine(project, "Builds", "Windows", "Game_Data") })
+                Require((string)find.Invoke(null, new object[] { path }) == expected, "Local build backend lookup failed: " + path);
+            Debug.Log("PANDA_BACKEND_PATH_CHECK_PASSED");
+        }
+
         // Uses the real Dijkstra problems with a unique temporary save; existing player saves are untouched.
         public static async Task<string> Run()
         {
             Require(EditorApplication.isPlaying, "Enter Play mode in SampleScene before running this check.");
+            CheckBackendPaths();
             var editor = CodeEditorUI.Instance;
             var companion = PandaCompanion.Instance;
             var service = PandaService.Instance;

@@ -120,11 +120,18 @@ namespace Panda
         {
             if (!string.IsNullOrEmpty(backendFolderOverride))
                 return backendFolderOverride;
+            return FindBackendFolder(Application.dataPath);
+        }
 
-            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
-            if (projectRoot == null) return null;
-            string candidate = Path.Combine(projectRoot, "panda-service");
-            return candidate;
+        // Local builds live under Builds/, while the Python service and .env stay at the project root.
+        static string FindBackendFolder(string dataPath)
+        {
+            for (var folder = Directory.GetParent(dataPath); folder != null; folder = folder.Parent)
+            {
+                string candidate = Path.Combine(folder.FullName, "panda-service");
+                if (File.Exists(Path.Combine(candidate, "main.py"))) return candidate;
+            }
+            return null;
         }
 
         string ResolvePythonExecutable(string backendFolder)
@@ -204,7 +211,20 @@ namespace Panda
             if (_process == null) return;
             try
             {
-                if (!_process.HasExited) _process.Kill();
+                if (!_process.HasExited)
+                {
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+                    // Windows venv launchers spawn the real interpreter as a child.
+                    using (var stop = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = Path.Combine(Environment.SystemDirectory, "taskkill.exe"),
+                        Arguments = $"/PID {_process.Id} /T /F",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    })) stop.WaitForExit(5000);
+#endif
+                    if (!_process.HasExited) _process.Kill();
+                }
             }
             catch (InvalidOperationException) { /* process never started or already exited */ }
             finally { _process.Dispose(); _process = null; }

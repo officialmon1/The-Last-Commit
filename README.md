@@ -48,6 +48,8 @@ Without a key, Panda uses the built-in fallback hints and the backend still star
 Unity starts the backend automatically on Play and stops the process it started when Play ends.
 You can also start it manually from `panda-service` with `.venv/Scripts/python.exe -m uvicorn main:app`;
 Unity reuses an already running service at `127.0.0.1:8000`.
+Windows builds inside `Builds/` also start Panda automatically: the game searches its parent folders
+for the project's `panda-service` folder and reads that folder's `.env`. No separate setup is needed on this machine.
 
 Zara's face/hand tracking remains available and starts automatically by default.
 Allow camera access, or disable **Auto Enable Face Tracking** on the scene's **PandaService** object.
