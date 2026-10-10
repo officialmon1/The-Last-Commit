@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
-/// <summary>一道题。数据来自 Resources/Tracks/&lt;track&gt;.json（字段名要和 JSON 一致）。</summary>
+/// <summary>One problem. Loaded from Resources/Tracks/&lt;track&gt;.json (field names must match the JSON).</summary>
 [Serializable]
 public class Problem
 {
@@ -24,32 +24,32 @@ public class Problem
 }
 
 /// <summary>
-/// 屏幕右侧的 Python 编辑器面板（朴素的 uGUI，运行时自己搭出来，不依赖预制体）。
+/// The Python editor panel on the right side of the screen (plain uGUI, built at runtime, no prefabs).
 ///
-/// 一个终端对应一条「关卡链」(track)：Resources/Tracks/&lt;track&gt;.json 里的题按 stage 排成一串，
-/// 前面的关过了才解锁下一关；最后一关是 Boss。子关的读入/输出都写好了，玩家只补 TODO；
-/// Boss 从零写，并且可以用 Ref 按钮调出自己前几关通过的代码（看 / 一键插进编辑器）。
+/// Each terminal opens one "track": the problems in Resources/Tracks/&lt;track&gt;.json ordered by stage;
+/// a stage unlocks only after the previous one is passed; the last stage is the Boss. Sub-stages come with I/O written, the player fills in the TODOs;
+/// the Boss is written from scratch, with Ref buttons that show the player's own accepted solutions from earlier stages (view / insert into the editor).
 ///
-/// 存档全在本机：Application.persistentDataPath/save_&lt;track&gt;.json
-/// （通过了哪些关、每关当前代码和输入、通过时的代码、总计时用掉多少秒）。
-/// 第一次打开终端时如果有存档，会问「Continue / New game」。
+/// Saves are local only: Application.persistentDataPath/save_&lt;track&gt;.json
+/// (which stages are passed, current code and input per stage, accepted code, seconds used of the track timer).
+/// The first time the terminal is opened with a save present it asks "Continue / New game".
 ///
-/// 用法：<c>CodeEditorUI.Instance.Open("dijkstra")</c>。Esc 关闭，Ctrl+Enter 用自己的 Input 跑，Submit 用隐藏输入判定。
+/// Usage: <c>CodeEditorUI.Instance.Open("dijkstra")</c>. Esc closes, Ctrl+Enter runs with your own Input, Submit judges with the hidden input.
 /// </summary>
 public class CodeEditorUI : MonoBehaviour
 {
     public static CodeEditorUI Instance { get; private set; }
     public static bool IsOpen => Instance != null && Instance._root != null && Instance._root.activeSelf;
-    /// <summary>一条关卡链的 Boss 通关时触发（参数 = track）。队友可以在这里接后续剧情。</summary>
+    /// <summary>Fired when a track's Boss is cleared (argument = track). Hook story events here.</summary>
     public static event Action<string> TrackCompleted;
-    /// <summary>总时间用完时触发一次（参数 = track）。花瓣死亡演出接的就是它。</summary>
+    /// <summary>Fired once when the track timer runs out (argument = track). The petal death sequence listens to this.</summary>
     public static event Action<string> TrackTimeUp;
 
-    [Tooltip("整条关卡链的总时间（秒）。计时从第一次打开终端开始，游戏运行期间一直走，退出游戏暂停，存在本机存档里")]
+    [Tooltip("Total time for the whole track (seconds). Starts the first time the terminal is opened, keeps running while the game runs, pauses when the game quits, stored in the local save")]
     public int trackTimeLimitSeconds = 36 * 60;
-    [Tooltip("1080p 屏幕上的字号；其他分辨率按屏幕高度等比换算（Retina 等高分屏会自动放大）")] public int fontSize = 18;
-    [Tooltip("额外整体缩放（1 = 不额外缩放）")] public float uiScale = 1f;
-    [Tooltip("调试：按这个键直接把时间用完（看死亡演出用）")] public Key debugTimeUpKey = Key.F9;
+    [Tooltip("Font size on a 1080p screen; other resolutions scale by screen height (Retina and other high-DPI screens scale up automatically)")] public int fontSize = 18;
+    [Tooltip("Extra overall scale (1 = none)")] public float uiScale = 1f;
+    [Tooltip("Debug: press this key to use up the timer immediately (to preview the death sequence)")] public Key debugTimeUpKey = Key.F9;
 
     GameObject _root, _refRoot, _refBar, _choiceRoot;
     Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText;
@@ -59,26 +59,26 @@ public class CodeEditorUI : MonoBehaviour
     Font _mono, _ui;
     CanvasScaler _scaler;
     int _lastScreenH;
-    float _builtScale = 1f;   // 搭界面时用的缩放，之后分辨率变了只做整体缩放
+    float _builtScale = 1f;   // scale used when the UI was built; later resolution changes only rescale the canvas
 
-    /// <summary>相对 1080p 的缩放比例（2880×1800 的 Retina ≈ 1.67）。</summary>
+    /// <summary>Scale relative to 1080p (a 2880x1800 Retina display is about 1.67).</summary>
     public static float ScaleFor(int screenHeight) => Mathf.Clamp(screenHeight / 1080f, 0.5f, 4f);
     CodeInputHelper _codeHelper, _stdinHelper;
 
-    // 当前关卡链
+    // Current track
     string _track;
     List<Problem> _problems = new List<Problem>();
     int _current = -1;
     Problem _problem => _current >= 0 && _current < _problems.Count ? _problems[_current] : null;
-    readonly HashSet<string> _passed = new HashSet<string>();                 // 通过的 slug
+    readonly HashSet<string> _passed = new HashSet<string>();                 // slugs of passed problems
     readonly Dictionary<string, string> _passedCode = new Dictionary<string, string>();
     readonly Dictionary<string, string> _codeCache = new Dictionary<string, string>();
     readonly Dictionary<string, string> _stdinCache = new Dictionary<string, string>();
     readonly List<Button> _stageBtns = new List<Button>();
-    string _shownSlug;   // 编辑器里当前显示的是哪道题的代码（切题/关闭时按它缓存）
+    string _shownSlug;   // which problem's code the editor currently shows (cached under this slug on switch/close)
     bool _running;
 
-    // 整条关卡链的计时
+    // Track timer
     float _runElapsed, _saveTimer;
     bool _runStarted, _runCompleted, _timeUpFired;
 
@@ -90,11 +90,11 @@ public class CodeEditorUI : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        // 先按当前屏幕把字号和所有尺寸放大再搭界面：字体按真实像素栅格化，高分屏上也清楚
+        // Scale the font size (and thus every layout size) for the current screen BEFORE building the UI: glyphs rasterize at real pixel size, so text stays crisp on high-DPI screens
         _builtScale = ScaleFor(Screen.height) * uiScale;
         fontSize = Mathf.Max(8, Mathf.RoundToInt(fontSize * _builtScale));
         _mono = OsFont(new[] { "Consolas", "Cascadia Mono", "Menlo", "Monaco", "Courier New" }, fontSize);
-        _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", "PingFang SC", "Arial" }, fontSize);
+        _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "Helvetica Neue", "PingFang SC", "Arial" }, fontSize);
         BuildUI();
         _root.SetActive(false);
         _refRoot.SetActive(false);
@@ -102,7 +102,7 @@ public class CodeEditorUI : MonoBehaviour
         PythonRunner.Init();
     }
 
-    // 界面按搭建时的屏幕排好；之后窗口大小变了就整体等比缩放（布局本身不变）
+    // The UI is laid out for the screen it was built on; if the window changes later, rescale the canvas uniformly (layout unchanged)
     void FitScale()
     {
         if (Screen.height == _lastScreenH) return;
@@ -121,7 +121,7 @@ public class CodeEditorUI : MonoBehaviour
             if (kb.escapeKey.wasPressedThisFrame) { Close(); return; }
             if (kb.enterKey.wasPressedThisFrame && (kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed)) RunCode(submit: false);
         }
-        // 点到哪个框就激活哪个框（不依赖 EventSystem 的点击路径，实测在某些机器上点 InputField 不会获得焦点）
+        // Activate whichever box was clicked (independent of the EventSystem click path: on some machines clicking an InputField does not focus it)
         var mouse = Mouse.current;
         if (mouse != null && mouse.leftButton.wasPressedThisFrame)
         {
@@ -143,7 +143,7 @@ public class CodeEditorUI : MonoBehaviour
         f.MoveTextEnd(false);
     }
 
-    // ------------------------------------------------------------------ 打开 / 关闭 / 选关
+    // ------------------------------------------------------------------ Open / close / stage selection
 
     public void Open(string track)
     {
@@ -160,7 +160,7 @@ public class CodeEditorUI : MonoBehaviour
             var save = LoadSave();
             if (save != null && (save.passed.Count > 0 || save.elapsedSeconds > 1f))
             {
-                // 有存档：先问继续还是重来
+                // a save exists: ask whether to continue or start over
                 int left = Mathf.Max(0, trackTimeLimitSeconds - Mathf.CeilToInt(save.elapsedSeconds));
                 _choiceText.text = $"Saved game found: {save.passed.Count}/{_problems.Count} stages cleared, {left / 60:00}:{left % 60:00} left.";
                 _choiceRoot.SetActive(true);
@@ -187,7 +187,7 @@ public class CodeEditorUI : MonoBehaviour
     {
         _choiceRoot.SetActive(false);
         _pendingSave = null;
-        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch (Exception e) { Debug.LogWarning("CodeEditorUI: 删除存档失败：" + e.Message); }
+        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to delete the save: " + e.Message); }
         StartFresh();
         SelectStage(_current);
     }
@@ -206,7 +206,7 @@ public class CodeEditorUI : MonoBehaviour
         PickDefaultStage();
     }
 
-    // 默认停在第一个没通过的已解锁关，全过了就停在 Boss
+    // Default to the first unlocked stage that is not passed yet; if all are passed, stay on the Boss
     void PickDefaultStage()
     {
         _current = -1;
@@ -230,7 +230,7 @@ public class CodeEditorUI : MonoBehaviour
         _refRoot.SetActive(false);
         _status.text = _passed.Contains(p.slug) ? "Already accepted. You can still re-run or improve it."
             : "Run uses the Input box.  Submit judges with hidden input.";
-        // 没装 Python：状态栏直接说明 + 下载按钮；Output 框里放完整的安装步骤
+        // No Python installed: explain in the status line, show the download button, and put the full install steps in the Output box
         bool noPython = PythonRunner.PythonPath == null;
         _pyBtn.gameObject.SetActive(noPython);
         if (noPython)
@@ -247,7 +247,7 @@ public class CodeEditorUI : MonoBehaviour
 
     public void Close()
     {
-        if (_choiceRoot.activeSelf) return;   // 还没选继续/重开，不让关
+        if (_choiceRoot.activeSelf) return;   // the Continue / New game choice is still pending, do not close
         if (_shownSlug != null) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
         _root.SetActive(false);
         _refRoot.SetActive(false);
@@ -262,7 +262,7 @@ public class CodeEditorUI : MonoBehaviour
         else { Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked; Cursor.visible = locked; }
     }
 
-    // ------------------------------------------------------------------ 题目（Resources/Tracks/<track>.json）
+    // ------------------------------------------------------------------ Problems (Resources/Tracks/<track>.json)
 
     [Serializable] class TrackFile { public List<Problem> problems = new List<Problem>(); }
 
@@ -275,7 +275,7 @@ public class CodeEditorUI : MonoBehaviour
             list.Sort((a, b) => a.stage.CompareTo(b.stage));
             if (list.Count > 0) return list;
         }
-        Debug.LogWarning($"CodeEditorUI: 没找到 Resources/Tracks/{track}.json 或里面没有题，用内置示例题。");
+        Debug.LogWarning($"CodeEditorUI: Resources/Tracks/{track}.json is missing or empty; using the built-in sample problem.");
         return new List<Problem>
         {
             new Problem
@@ -288,7 +288,7 @@ public class CodeEditorUI : MonoBehaviour
         };
     }
 
-    // ------------------------------------------------------------------ 本机存档
+    // ------------------------------------------------------------------ Local save
 
     [Serializable] class Entry { public string slug; public string text; }
     [Serializable]
@@ -309,7 +309,7 @@ public class CodeEditorUI : MonoBehaviour
             if (!File.Exists(SavePath)) return null;
             return JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
         }
-        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 读取存档失败：" + e.Message); return null; }
+        catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to read the save: " + e.Message); return null; }
     }
 
     void ApplySave(SaveData s)
@@ -333,14 +333,14 @@ public class CodeEditorUI : MonoBehaviour
         foreach (var kv in _codeCache) s.code.Add(new Entry { slug = kv.Key, text = kv.Value });
         foreach (var kv in _stdinCache) s.stdin.Add(new Entry { slug = kv.Key, text = kv.Value });
         try { File.WriteAllText(SavePath, JsonUtility.ToJson(s, true)); }
-        catch (Exception e) { Debug.LogWarning("CodeEditorUI: 写存档失败：" + e.Message); }
+        catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to write the save: " + e.Message); }
     }
 
     void OnApplicationQuit() => SaveLocal();
 
-    // ------------------------------------------------------------------ 总计时
+    // ------------------------------------------------------------------ Track timer
 
-    /// <summary>复活后调用：重新给一整段时间（通关记录保留）。</summary>
+    /// <summary>Call after reviving: grants a fresh full time budget (stage progress is kept).</summary>
     public void RestartRun()
     {
         if (!_runStarted) return;
@@ -350,7 +350,7 @@ public class CodeEditorUI : MonoBehaviour
         SaveLocal();
     }
 
-    // 游戏运行期间一直走，面板关着也走；时间到只触发一次 TrackTimeUp
+    // Runs while the game runs, even with the panel closed; fires TrackTimeUp exactly once
     void TickRun()
     {
         if (!_runStarted || _runCompleted || _choiceRoot.activeSelf) return;
@@ -370,15 +370,15 @@ public class CodeEditorUI : MonoBehaviour
 
     void OnGUI()
     {
-        if (!_runStarted || IsOpen) return;   // 面板开着时标题栏里已经有倒计时
+        if (!_runStarted || IsOpen) return;   // the panel header already shows the countdown while open
         string t = TimeUp ? "Time's up" : _runCompleted ? "Completed" : $"{Mathf.CeilToInt(SecondsLeft) / 60:00}:{Mathf.CeilToInt(SecondsLeft) % 60:00}";
         float k = ScaleFor(Screen.height);
         GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? new Color(1f, 0.45f, 0.4f) : Color.white } });
     }
 
-    // ------------------------------------------------------------------ 关卡栏 / 参考代码
+    // ------------------------------------------------------------------ Stage bar / reference code
 
-    // 先摘下来再 Destroy：Destroy 要到帧末才生效，同一帧里重建后遍历子节点时不能把旧的算进去
+    // Detach before Destroy: Destroy only takes effect at the end of the frame, and the rebuild in the same frame must not count the old children
     static void ClearChildren(Transform t)
     {
         var old = new List<Transform>();
@@ -396,7 +396,7 @@ public class CodeEditorUI : MonoBehaviour
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
             _stageBtns.Add(MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), Color.gray));
         }
-        // Ref 按钮：查看自己前几关通过的代码
+        // Ref buttons: view your own accepted solutions from earlier stages
         ClearChildren(_refBar.transform);
         var lbl = Label("RefLabel", _refBar.transform, _ui, fontSize - 2, new Color(0.7f, 0.7f, 0.7f), TextAnchor.MiddleLeft);
         lbl.text = "Your earlier solutions:";
@@ -420,7 +420,7 @@ public class CodeEditorUI : MonoBehaviour
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
             b.GetComponentInChildren<Text>().text = (boss ? "BOSS" : $"{i + 1}") + (passed ? " ✓" : unlocked ? "" : " 🔒");
         }
-        // Ref 栏永远占着位置（布局固定），每个 Ref 只有通过了、且在当前关之前才能点
+        // The Ref row always keeps its place (fixed layout); a Ref is clickable only if that stage is passed and before the current one
         int k = 0;
         foreach (Transform c in _refBar.transform)
         {
@@ -449,15 +449,15 @@ public class CodeEditorUI : MonoBehaviour
         _codeHelper.MoveCaretToEnd();
     }
 
-    // ------------------------------------------------------------------ 运行
+    // ------------------------------------------------------------------ Run
 
-    /// <summary>submit = false：用玩家自己填的 Input 跑，只看输出。submit = true：用题目的隐藏输入跑并判定、解锁下一关。</summary>
+    /// <summary>submit = false: run with the player's own Input and just show the output. submit = true: run with the hidden input, judge, and unlock the next stage.</summary>
     async void RunCode(bool submit)
     {
         if (_running || _problem == null || (submit && TimeUp)) return;
         var problem = _problem;
         _running = true;
-        _status.text = submit ? "Judging…" : "Running…";
+        _status.text = submit ? "Judging..." : "Running...";
         _output.text = "";
         string code = _code.text;
         _codeCache[problem.slug] = code;
@@ -511,7 +511,7 @@ public class CodeEditorUI : MonoBehaviour
         return string.Join("\n", lines).Trim();
     }
 
-    // ------------------------------------------------------------------ 搭 UI
+    // ------------------------------------------------------------------ Build UI
 
     static Font OsFont(string[] names, int size)
     {
@@ -530,12 +530,12 @@ public class CodeEditorUI : MonoBehaviour
         var canvas = canvasGo.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;
-        // 按真实像素渲染，动态字体就不会被放大变糊
+        // Render at real pixel size so dynamic fonts are never upscaled and blurred
         _scaler = canvasGo.GetComponent<CanvasScaler>();
         _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
         _scaler.scaleFactor = 1f;
 
-        // ---------- 右侧主面板（每块高度固定，内容多了在块内滚） ----------
+        // ---------- Main panel on the right (every block has a fixed height; overflow scrolls inside the block) ----------
         var panel = Panel("Panel", canvasGo.transform, new Color(0.11f, 0.12f, 0.14f, 0.96f));
         _root = panel.gameObject;
         var prt = panel.rectTransform;
@@ -549,27 +549,27 @@ public class CodeEditorUI : MonoBehaviour
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
 
-        // 标题 + 倒计时
+        // Title + countdown
         var header = Row("Header", panel.transform, fontSize * 1.7f);
         _title = Label("Title", header, _ui, fontSize + 4, Color.white, TextAnchor.MiddleLeft);
         _title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
         _timerLabel = Label("Timer", header, _mono, fontSize + 2, Color.white, TextAnchor.MiddleRight);
         _timerLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 9;
 
-        // 关卡栏
+        // Stage bar
         _stageBar = Row("Stages", panel.transform, fontSize * 2);
 
-        // 题目描述（可滚）
+        // Problem description (scrollable)
         var descBox = Panel("Problem", panel.transform, new Color(0.16f, 0.17f, 0.2f));
         Fix(descBox.gameObject, fontSize * 9f);
         _problemText = ScrollableText(descBox, _ui, fontSize - 1, new Color(0.9f, 0.9f, 0.9f));
 
-        // 代码框（固定 18 行高，多了上下滚）
+        // Code box (fixed at 18 lines, scrolls vertically)
         _code = MakeInputField("Code", panel.transform, "# write Python here");
         _codeHelper = _code.gameObject.AddComponent<CodeInputHelper>();
         Fix(_code.gameObject, fontSize * 18);
 
-        // 玩家自己的输入（stdin）
+        // The player's own input (stdin)
         var inLabel = Label("InputLabel", panel.transform, _ui, fontSize - 3, new Color(0.7f, 0.7f, 0.7f), TextAnchor.LowerLeft);
         inLabel.text = "Input (stdin for Run)";
         Fix(inLabel.gameObject, fontSize);
@@ -578,7 +578,7 @@ public class CodeEditorUI : MonoBehaviour
         _stdinHelper.autoIndent = false;
         Fix(_stdin.gameObject, fontSize * 4);
 
-        // 输出
+        // Output
         var outLabel = Label("OutputLabel", panel.transform, _ui, fontSize - 3, new Color(0.7f, 0.7f, 0.7f), TextAnchor.LowerLeft);
         outLabel.text = "Output";
         Fix(outLabel.gameObject, fontSize);
@@ -586,7 +586,7 @@ public class CodeEditorUI : MonoBehaviour
         Fix(outBox.gameObject, fontSize * 8);
         _output = ScrollableText(outBox, _mono, fontSize - 1, new Color(0.85f, 0.9f, 0.85f));
 
-        // 按钮行（三个按钮平分宽度）+ Ref 行 + 状态行
+        // Button row (three buttons share the width) + Ref row + status row
         var bar = Row("Bar", panel.transform, fontSize * 2);
         _runBtn = MakeButton("Run", bar, "Run (Ctrl+Enter)", () => RunCode(false), new Color(0.25f, 0.45f, 0.7f));
         _submitBtn = MakeButton("Submit", bar, "Submit", () => RunCode(true), new Color(0.2f, 0.55f, 0.35f));
@@ -595,14 +595,14 @@ public class CodeEditorUI : MonoBehaviour
         var statusRow = Row("StatusRow", panel.transform, fontSize * 1.6f);
         _status = Label("Status", statusRow, _ui, fontSize - 1, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
         _status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-        // 没装 Python 时才显示：一键打开下载页
+        // Shown only when Python is missing: opens the download page
         _pyBtn = MakeButton("GetPython", statusRow, "Get Python", () => Application.OpenURL(PythonRunner.DownloadUrl), new Color(0.75f, 0.45f, 0.2f));
         var pyLe = _pyBtn.GetComponent<LayoutElement>();
         pyLe.flexibleWidth = 0;
         pyLe.preferredWidth = fontSize * 8;
         _pyBtn.gameObject.SetActive(false);
 
-        // ---------- 继续 / 重新开始（盖在主面板上） ----------
+        // ---------- Continue / New game (overlaid on the main panel) ----------
         var choice = Panel("Choice", canvasGo.transform, new Color(0.08f, 0.09f, 0.11f, 0.98f));
         _choiceRoot = choice.gameObject;
         var crt = choice.rectTransform;
@@ -621,7 +621,7 @@ public class CodeEditorUI : MonoBehaviour
         MakeButton("Continue", cbar, "Continue", ChooseContinue, new Color(0.2f, 0.55f, 0.35f));
         MakeButton("New", cbar, "New game", ChooseNewGame, new Color(0.6f, 0.3f, 0.3f));
 
-        // ---------- 左侧参考代码面板 ----------
+        // ---------- Reference code panel on the left ----------
         var refPanel = Panel("ReferencePanel", canvasGo.transform, new Color(0.1f, 0.1f, 0.13f, 0.96f));
         _refRoot = refPanel.gameObject;
         var rrt = refPanel.rectTransform;
@@ -638,7 +638,7 @@ public class CodeEditorUI : MonoBehaviour
         Fix(_refTitle.gameObject, fontSize * 1.7f);
         _refField = MakeInputField("RefCode", refPanel.transform, "");
         _refField.readOnly = true;
-        _refField.gameObject.AddComponent<CodeInputHelper>().autoIndent = false;   // 负责按内容撑高度 + 滚轮
+        _refField.gameObject.AddComponent<CodeInputHelper>().autoIndent = false;   // sizes the text to its content and handles wheel scrolling
         _refField.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
         var rbar = Row("Bar", refPanel.transform, fontSize * 2);
         MakeButton("Insert", rbar, "Insert into editor", InsertReference, new Color(0.25f, 0.45f, 0.7f));
@@ -665,7 +665,7 @@ public class CodeEditorUI : MonoBehaviour
         hl.childForceExpandHeight = true;
         var le = go.GetComponent<LayoutElement>();
         le.preferredHeight = le.minHeight = height;
-        le.flexibleHeight = 0;   // 显式写 0：否则横向布局组会把 childForceExpandHeight 当成自己可伸缩，去抢剩余空间
+        le.flexibleHeight = 0;   // explicit 0: otherwise a horizontal layout group reports childForceExpandHeight as its own flexibility and grabs spare space
         return go.transform;
     }
 
@@ -684,7 +684,7 @@ public class CodeEditorUI : MonoBehaviour
         return t;
     }
 
-    /// <summary>在一个 Image 里放一段可以用滚轮滚动的文字（题面、输出）。</summary>
+    /// <summary>Puts wheel-scrollable text inside an Image (problem description, output).</summary>
     static Text ScrollableText(Image box, Font font, int size, Color color)
     {
         var scroll = box.gameObject.AddComponent<ScrollRect>();
@@ -709,7 +709,7 @@ public class CodeEditorUI : MonoBehaviour
         return t;
     }
 
-    /// <summary>固定高度：最小 = 期望，伸缩 0，布局再挤也不会变。</summary>
+    /// <summary>Fixed height: min = preferred, flexible 0, so the layout never squeezes it.</summary>
     static void Fix(GameObject go, float h)
     {
         var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
@@ -727,7 +727,7 @@ public class CodeEditorUI : MonoBehaviour
 
     InputField MakeInputField(string name, Transform parent, string placeholder)
     {
-        // 结构：框(Image + InputField + 只认滚轮的 ScrollRect) → Viewport(RectMask2D) → Text(高度由 CodeInputHelper 按完整文本算) + Placeholder
+        // Structure: box (Image + InputField + wheel-only ScrollRect) -> Viewport (RectMask2D) -> Text (height computed from the full text by CodeInputHelper) + Placeholder
         var bg = Panel(name, parent, new Color(0.07f, 0.08f, 0.09f));
         var field = bg.gameObject.AddComponent<InputField>();
         var scroll = bg.gameObject.AddComponent<WheelOnlyScrollRect>();

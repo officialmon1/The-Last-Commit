@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// 只响应滚轮、不响应拖拽的 ScrollRect：拖拽留给 InputField 做文字选择。
+/// A ScrollRect that only reacts to the mouse wheel, never to drags: dragging is left to the InputField for text selection.
 /// </summary>
 public class WheelOnlyScrollRect : ScrollRect
 {
@@ -15,15 +15,15 @@ public class WheelOnlyScrollRect : ScrollRect
 }
 
 /// <summary>
-/// 给 uGUI 的 InputField 补上代码编辑器该有的东西（挂在 InputField 同一个物体上）：
-/// Ctrl+Z / Ctrl+Y(Ctrl+Shift+Z) 撤销重做、Ctrl+C/V/X/A、Tab = 4 空格、
-/// 回车自动缩进（上一行以 ':' 结尾再多缩 4 格）、光标移动时让 ScrollRect 跟着滚。
+/// Adds the code-editor basics that uGUI's InputField lacks (attach to the same object as the InputField):
+/// Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) undo/redo, Ctrl+C/V/X/A, Tab = 4 spaces,
+/// auto-indent on Enter (one extra level when the previous line ends with ':'), and the ScrollRect follows the caret.
 /// </summary>
 [RequireComponent(typeof(InputField))]
 public class CodeInputHelper : MonoBehaviour
 {
     public bool autoIndent = true;
-    [Tooltip("连续输入多少秒内算一步撤销")] public float undoGroupSeconds = 0.5f;
+    [Tooltip("Edits closer together than this many seconds are grouped into one undo step")] public float undoGroupSeconds = 0.5f;
 
     InputField _field;
     ScrollRect _scroll;
@@ -46,7 +46,7 @@ public class CodeInputHelper : MonoBehaviour
         ResetHistory();
     }
 
-    /// <summary>程序设置了新内容后调用：清空撤销栈，把当前内容当作起点。</summary>
+    /// <summary>Call after setting the text programmatically: clears the undo stack and makes the current text the baseline.</summary>
     public void ResetHistory()
     {
         _undo.Clear();
@@ -55,19 +55,19 @@ public class CodeInputHelper : MonoBehaviour
         _lastChangeTime = -10f;
     }
 
-    /// <summary>ActivateInputField 会在下一帧全选，所以晚两帧再把光标挪到末尾。</summary>
+    /// <summary>ActivateInputField selects all on the next frame, so move the caret to the end two frames later.</summary>
     public void MoveCaretToEnd() => _caretEndPending = 2;
     int _caretEndPending;
 
     void OnChanged(string t)
     {
         if (_applying) return;
-        bool burst = _changedThisFrame;   // 同一帧里第二次以上的变化 = 粘贴之类的批量输入，不做自动缩进
+        bool burst = _changedThisFrame;   // a second change in the same frame means a bulk edit (paste etc.): no auto-indent
         _changedThisFrame = true;
         int caret = _field.caretPosition;
         bool newline = t.Length == _current.text.Length + 1 && caret > 0 && caret <= t.Length && t[caret - 1] == '\n';
 
-        // Tab 键可能被 InputField 插成 \t：统一变 4 个空格
+        // The InputField may insert a literal \t for Tab: normalize to 4 spaces
         if (t.IndexOf('\t') >= 0)
         {
             int before = 0;
@@ -77,10 +77,10 @@ public class CodeInputHelper : MonoBehaviour
             Apply(t, caret);
             _tabPending = 0;
         }
-        // 回车自动缩进：只在恰好多了一个 '\n' 时做
+        // Auto-indent on Enter: only when exactly one '\n' was added
         else if (autoIndent && newline && !burst)
         {
-            int lineStart = caret >= 2 ? t.LastIndexOf('\n', caret - 2) + 1 : 0;   // 上一行的开头
+            int lineStart = caret >= 2 ? t.LastIndexOf('\n', caret - 2) + 1 : 0;   // start of the previous line
             string prev = t.Substring(lineStart, caret - 1 - lineStart);
             int indent = 0;
             while (indent < prev.Length && prev[indent] == ' ') indent++;
@@ -93,7 +93,7 @@ public class CodeInputHelper : MonoBehaviour
             }
         }
 
-        // 记录撤销：间隔超过 undoGroupSeconds 才开新的一步；换行总是单独一步（像普通编辑器那样按行撤销）
+        // Record undo: start a new step after undoGroupSeconds of silence; a newline always starts its own step (line-wise undo like a normal editor)
         if (newline || Time.unscaledTime - _lastChangeTime > undoGroupSeconds) { _undo.Add(_current); _redo.Clear(); }
         _lastChangeTime = newline ? -10f : Time.unscaledTime;
         _current = new State { text = t, caret = caret };
@@ -122,7 +122,7 @@ public class CodeInputHelper : MonoBehaviour
                 else if (kb.yKey.wasPressedThisFrame) Redo();
                 else if (kb.aKey.wasPressedThisFrame) SelectAll();
                 else if (kb.cKey.wasPressedThisFrame) Copy();
-                else if (kb.xKey.wasPressedThisFrame && !_changedThisFrame) Cut();     // InputField 自己处理过了就不重复
+                else if (kb.xKey.wasPressedThisFrame && !_changedThisFrame) Cut();     // skip if the InputField already handled it this frame
                 else if (kb.vKey.wasPressedThisFrame && !_changedThisFrame) Paste();
             }
             else if (kb.tabKey.wasPressedThisFrame) _tabPending = 2;
@@ -132,9 +132,9 @@ public class CodeInputHelper : MonoBehaviour
         {
             _field.MoveTextEnd(false);
             _lastCaret = -1;
-            if (_undo.Count == 0) _current.caret = _field.text.Length;   // 撤销回起点时光标也在末尾
+            if (_undo.Count == 0) _current.caret = _field.text.Length;   // undoing back to the baseline keeps the caret at the end
         }
-        // Tab：InputField 可能什么都不插，两帧后还没看到 \t 就自己插 4 个空格
+        // Tab: the InputField may insert nothing; if no \t showed up after two frames, insert 4 spaces ourselves
         if (_tabPending > 0 && --_tabPending == 0 && _field.isFocused)
         {
             int caret = Mathf.Clamp(_field.caretPosition, 0, _field.text.Length);
@@ -146,7 +146,7 @@ public class CodeInputHelper : MonoBehaviour
 
     void LateUpdate() => _changedThisFrame = false;
 
-    // ------------------------------------------------------------------ 快捷键
+    // ------------------------------------------------------------------ Shortcuts
 
     void Undo()
     {
@@ -209,13 +209,13 @@ public class CodeInputHelper : MonoBehaviour
         OnChanged(_field.text);
     }
 
-    // ------------------------------------------------------------------ 内容高度
+    // ------------------------------------------------------------------ Content height
 
     int _lastHeightLen = -1, _followFrames;
     float _lastViewW = -1f;
 
-    // Text 的高度要按「完整文本」算：InputField 只画得下 Text 矩形里的行，
-    // 如果让 Text 自己按已画出的内容撑高度，空文本会永远撑不起来（0 行 → 0 高 → 0 行）。
+    // The Text height must be computed from the FULL text: the InputField only draws the lines that fit the Text rect,
+    // so if the Text sized itself from what is drawn, empty text would never grow (0 lines -> 0 height -> 0 lines).
     void UpdateContentHeight()
     {
         if (_scroll == null || _text == null) return;
@@ -224,13 +224,13 @@ public class CodeInputHelper : MonoBehaviour
         if (t.Length == _lastHeightLen && Mathf.Approximately(w, _lastViewW)) return;
         _lastHeightLen = t.Length;
         _lastViewW = w;
-        _followFrames = 2;   // 文本变了，行信息要下一帧才准，再跟一次光标
+        _followFrames = 2;   // text changed; line info is only accurate next frame, so follow the caret once more
         var settings = _text.GetGenerationSettings(new Vector2(w, 0f));
         float h = _text.cachedTextGeneratorForLayout.GetPreferredHeight(t.Length == 0 ? " " : t, settings) / _text.pixelsPerUnit;
-        _scroll.content.sizeDelta = new Vector2(0f, h + _text.fontSize);   // 多留一行，光标在末尾时不贴边
+        _scroll.content.sizeDelta = new Vector2(0f, h + _text.fontSize);   // one spare line so the caret at the end is not flush with the edge
     }
 
-    // ------------------------------------------------------------------ 视图跟随光标
+    // ------------------------------------------------------------------ Scroll to follow the caret
 
     void FollowCaret()
     {
@@ -245,11 +245,11 @@ public class CodeInputHelper : MonoBehaviour
         if (gen == null || gen.lineCount == 0) return;
         int line = 0;
         for (int i = 0; i < gen.lineCount; i++) if (gen.lines[i].startCharIdx <= caret) line = i; else break;
-        float top = -gen.lines[line].topY;                 // 相对文字顶端向下的距离
+        float top = -gen.lines[line].topY;                 // distance down from the top of the text
         float bottom = top + gen.lines[line].height;
         float viewH = _scroll.viewport.rect.height;
         float contentH = _scroll.content.rect.height;
-        float offset = _scroll.content.anchoredPosition.y;  // 已经向上卷了多少
+        float offset = _scroll.content.anchoredPosition.y;  // how far the content is scrolled up already
         if (top < offset) offset = top;
         else if (bottom > offset + viewH) offset = bottom - viewH;
         offset = Mathf.Clamp(offset, 0f, Mathf.Max(0f, contentH - viewH));

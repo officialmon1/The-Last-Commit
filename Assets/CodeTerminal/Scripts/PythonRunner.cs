@@ -12,14 +12,14 @@ public class PythonResult
     public int exitCode;
     public bool timedOut;
     public long runMs;
-    /// <summary>运行器本身的错误（找不到 Python 等），不是用户代码的错误。</summary>
+    /// <summary>Runner error (Python not found, etc.), not an error in the user's code.</summary>
     public string error;
 }
 
 /// <summary>
-/// 用本机的 Python 解释器跑一段代码：写到临时文件 → `python -I -u file.py` → 收集 stdout/stderr，超时就杀掉。
-/// 解释器查找顺序：StreamingAssets/python/python.exe（可放 Python 官方 embeddable 包，打包后免安装）→ PATH 里的 python / python3 / py。
-/// 只用内置库，不做沙箱；玩家跑的是自己写的代码。
+/// Runs code with the local Python interpreter: write a temp file -> `python -I -u file.py` -> collect stdout/stderr, kill on timeout.
+/// Interpreter lookup order: StreamingAssets/python/python.exe (drop in the official embeddable package for install-free builds) -> python / python3 / py on PATH.
+/// Built-in library only, no sandbox: the player runs their own code.
 /// </summary>
 public static class PythonRunner
 {
@@ -27,7 +27,7 @@ public static class PythonRunner
     static string _python;
     static string _tempDir;
 
-    /// <summary>在主线程调一次，缓存 Unity 路径（Application.* 不能在后台线程用）。</summary>
+    /// <summary>Call once on the main thread to cache Unity paths (Application.* cannot be used from background threads).</summary>
     public static void Init()
     {
         if (_tempDir == null) _tempDir = Application.temporaryCachePath;
@@ -38,7 +38,7 @@ public static class PythonRunner
 
     public const string DownloadUrl = "https://www.python.org/downloads/";
 
-    /// <summary>找不到 Python 时给玩家看的安装说明（按平台）。</summary>
+    /// <summary>Install instructions shown to the player when Python is missing (per platform).</summary>
     public static string InstallHint =>
         Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor
             ? "Python 3 was not found on this Mac.\n" +
@@ -100,13 +100,13 @@ public static class PythonRunner
                     r.timedOut = true;
                     try { p.Kill(); } catch { }
                 }
-                p.WaitForExit();   // 等异步读取把剩余输出刷完
+                p.WaitForExit();   // let the async readers flush the remaining output
                 r.exitCode = r.timedOut ? -1 : p.ExitCode;
             }
             r.runMs = sw.ElapsedMilliseconds;
             r.stdout = so.ToString();
             r.stderr = se.ToString();
-            if (r.timedOut) r.stderr += $"\n[超时：超过 {timeoutSeconds:0.#} 秒，已终止]\n";
+            if (r.timedOut) r.stderr += $"\n[Timed out after {timeoutSeconds:0.#} s, process killed]\n";
         }
         catch (Exception e)
         {

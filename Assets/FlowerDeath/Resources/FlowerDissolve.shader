@@ -1,6 +1,6 @@
-// 角色身体的溶解 shader（URP 版）：按「高度 + 3D 噪声」逐片消失，边缘发出花色光。
-// _Progress 由 FlowerDissolve.cs 每帧推进。噪声函数与 C# 端完全同构，
-// 这样 CPU 端能算出每个表面点何时消失，花瓣才能正好从溶解边缘飘出来。
+// Body dissolve shader (URP): erodes by "height + 3D noise", with a petal-colored glowing edge.
+// _Progress is advanced every frame by FlowerDissolve.cs. The noise function is identical to the C# side,
+// so the CPU can predict when each surface point disappears and petals spawn exactly at the dissolve edge.
 Shader "FlowerDeath/Dissolve"
 {
     Properties
@@ -44,15 +44,15 @@ Shader "FlowerDeath/Dissolve"
             float _EdgeWidth;
             float4 _EdgeColor;
             float _EdgeEmission;
-            // 世界 → target 局部。溶解在 target 局部空间计算，这样角色/手在动时花纹不会漂移。
+            // World -> target local. The dissolve is computed in target local space so the pattern does not drift while the character/hands move.
             float4x4 _WorldToTarget;
-            // 蔓延模式：以到 _Origin（target 局部）的距离代替高度，例如从手开始向全身蔓延
+            // Spread mode: distance to _Origin (target local) replaces height, e.g. spreading from the hands over the body
             float4 _Origin;
             float _MaxDist;
             float _UseOrigin;
         CBUFFER_END
 
-        // 32 位整数哈希（lowbias32 变体）。必须与 FlowerDissolve.cs 中的 Hash3 保持一致。
+        // 32-bit integer hash (lowbias32 variant). Must stay identical to Hash3 in FlowerDissolve.cs.
         float Hash3(int3 c)
         {
             uint3 u = uint3(c + int3(4096, 4096, 4096));
@@ -110,7 +110,7 @@ Shader "FlowerDeath/Dissolve"
             return lerp(Fbm(p * _NoiseScale), h, _HeightWeight);
         }
 
-        // 返回到溶解边缘的距离；小于 0 的像素被丢弃。
+        // Returns the distance to the dissolve edge; pixels below 0 are discarded.
         float DissolveClip(float3 positionWS)
         {
             float d = DissolveValue(positionWS) - _Progress;

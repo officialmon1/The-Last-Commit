@@ -1,5 +1,5 @@
-// 单片花瓣（URP 粒子版）：在一个 Quad 上用形状函数抠出带缺口的樱花花瓣。
-// 翻滚/抖动由 ParticleSystem 的 Rotation over Lifetime 负责；颜色来自粒子顶点色。
+// A single petal (URP particle version): a notched cherry-blossom petal cut out of a quad with a shape function.
+// Tumbling comes from the ParticleSystem's Rotation over Lifetime; color comes from the particle vertex color.
 Shader "FlowerDeath/Petal"
 {
     Properties
@@ -24,16 +24,16 @@ Shader "FlowerDeath/Petal"
             float _BacklightStrength;
         CBUFFER_END
 
-        // uv -> 花瓣形状。返回 >0 表示在花瓣内。x: -1..1 横向，t: 0 = 根部，1 = 顶端
+        // uv -> petal shape. Returns >0 inside the petal. x: -1..1 across, t: 0 = base, 1 = tip
         float PetalMask(float2 uv, out float t, out float ax)
         {
             float x = uv.x * 2.0 - 1.0;
             t = 1.0 - uv.y;
             ax = abs(x);
             float halfWidth = 0.95 * sin(3.14159 * pow(saturate(t), 0.72));
-            halfWidth *= lerp(0.55, 1.0, smoothstep(0.0, 0.35, t)); // 根部更窄
+            halfWidth *= lerp(0.55, 1.0, smoothstep(0.0, 0.35, t)); // narrower at the base
             float inside = halfWidth - ax;
-            // 顶端的 V 形缺口
+            // V-shaped notch at the tip
             float notchW = 0.32;
             float notch = t - (1.0 - _NotchDepth * (1.0 - ax / notchW));
             if (ax < notchW && notch > 0.0) inside = -1.0;
@@ -42,7 +42,7 @@ Shader "FlowerDeath/Petal"
 
         float3 CurlVertex(float3 positionOS)
         {
-            // 卷曲：两侧向 +Z 翘起，像真花瓣一样不是平板（Quad 的 x 范围 -0.5..0.5）
+            // curl: both sides lift towards +Z so the petal is not a flat card (quad x range is -0.5..0.5)
             positionOS.z += _Curl * positionOS.x * positionOS.x * 2.0;
             return positionOS;
         }
@@ -101,7 +101,7 @@ Shader "FlowerDeath/Petal"
                 clip(PetalMask(input.uv, t, ax));
 
                 half3 c = input.color.rgb;
-                // 根部稍深、顶端稍浅，中间一条淡淡的脉络
+                // slightly darker at the base, lighter at the tip, with a faint vein down the middle
                 float shade = lerp(0.78, 1.06, smoothstep(0.0, 0.8, t));
                 float vein = 1.0 - 0.12 * (1.0 - smoothstep(0.0, 0.06, ax)) * (1.0 - t);
                 half3 albedo = c * shade * vein;
@@ -110,7 +110,7 @@ Shader "FlowerDeath/Petal"
                 if (!isFront) n = -n;
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 half ndl = dot(n, mainLight.direction);
-                // 正面受光 + 背面透光
+                // front lighting + back-lit translucency
                 half3 lit = mainLight.color * mainLight.shadowAttenuation * (saturate(ndl) + _BacklightStrength * saturate(-ndl));
                 half3 ambient = SampleSHPixel(half3(0, 0, 0), n);
                 half3 col = albedo * (lit + ambient) + albedo * _EmissionStrength;

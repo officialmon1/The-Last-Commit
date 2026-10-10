@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 「死亡时像花一样消散」组件（Godot flower_dissolve.gd 的 Unity 版）。
+/// "Dissolve into petals on death" component (Unity port of the Godot flower_dissolve.gd).
 ///
-/// 用法：挂到角色上（或在 target 指定角色根节点），角色死亡时调用 Play()。它会：
-///   1. 把 target 下所有 Renderer 换成溶解材质，从上到下（可改）一片片消失；
-///   2. 在正在溶解的边缘生成花瓣粒子，花瓣翻滚着被风吹走、落地后缩小消失。
-/// DissolveFinished：身体完全消失（此时可以安全 Destroy 角色）。花瓣粒子独立于角色，会自己飘完再销毁。
+/// Usage: attach to the character (or set target to the character root) and call Play() when it dies. It will:
+///   1. swap every Renderer under target to the dissolve material and erode it piece by piece, top-down by default;
+///   2. spawn petal particles at the dissolving edge; they tumble away in the wind, land, shrink and vanish.
+/// DissolveFinished: the body is fully gone (safe to Destroy the character). The petal system is independent and destroys itself when done.
 /// </summary>
 public class FlowerDissolve : MonoBehaviour
 {
-    [Tooltip("要消散的角色根节点；留空则使用自身。")]
+    [Tooltip("Root of the character to dissolve; empty = this object.")]
     public Transform target;
 
     [Header("Dissolve")]
@@ -24,21 +24,21 @@ public class FlowerDissolve : MonoBehaviour
     [ColorUsage(false, true)] public Color edgeColor = new Color(1f, 0.58f, 0.78f);
     public float edgeEmission = 5f;
     public bool hideTargetWhenDone = true;
-    [Tooltip("设置后以到该点的距离代替高度：离它最近的先消散（例如从手开始向全身蔓延）。topDown 此时无效。")]
+    [Tooltip("When set, distance to this point replaces height: the closest parts dissolve first (e.g. spreading from the hands over the body). topDown is ignored.")]
     public Transform dissolveOrigin;
 
     [Header("Petals")]
-    [Tooltip("整个消散过程总共飘出多少片花瓣。")]
+    [Tooltip("Total number of petals released over the whole dissolve.")]
     public int petalAmount = 700;
     public float petalLifetime = 3.2f;
     public Vector2 petalSize = new Vector2(0.075f, 0.1f);
-    [Tooltip("风（恒定加速度，m/s²）。y 为正时花瓣会先往上飘。")]
+    [Tooltip("Wind (constant acceleration, m/s^2). A positive y lifts the petals first.")]
     public Vector3 wind = new Vector3(1.2f, 0.1f, 0.3f);
     public Gradient petalColors;
-    [Tooltip("场景里有 Collider 时，花瓣会落在上面。")]
+    [Tooltip("Petals land on Colliders in the scene.")]
     public bool petalsCollide = true;
 
-    [Header("Shaders (留空则从 FlowerDeath/Resources 加载)")]
+    [Header("Shaders (empty = load from FlowerDeath/Resources)")]
     [SerializeField] Shader dissolveShader;
     [SerializeField] Shader petalShader;
 
@@ -54,7 +54,7 @@ public class FlowerDissolve : MonoBehaviour
 
     readonly List<Saved> _saved = new List<Saved>();
     readonly List<Material> _materials = new List<Material>();
-    readonly List<Sample> _samples = new List<Sample>();   // 按 value 升序
+    readonly List<Sample> _samples = new List<Sample>();   // sorted by value ascending
     int _nextSample;
     ParticleSystem _particles;
     Transform _root;
@@ -62,7 +62,7 @@ public class FlowerDissolve : MonoBehaviour
 
     Transform Root => target != null ? target : transform;
 
-    /// <summary>开始消散。</summary>
+    /// <summary>Start dissolving.</summary>
     public void Play()
     {
         if (IsPlaying) return;
@@ -70,14 +70,14 @@ public class FlowerDissolve : MonoBehaviour
         var renderers = new List<Renderer>();
         foreach (var r in _root.GetComponentsInChildren<Renderer>())
             if (r is MeshRenderer || r is SkinnedMeshRenderer) renderers.Add(r);
-        if (renderers.Count == 0) { Debug.LogWarning("FlowerDissolve: target 下没有 Renderer。", this); return; }
+        if (renderers.Count == 0) { Debug.LogWarning("FlowerDissolve: no Renderer under target.", this); return; }
 
         float vMin, vMax;
         BuildSamples(renderers, out vMin, out vMax);
         ApplyDissolveMaterials(renderers);
         CreateParticles();
 
-        // 溶解阈值的起止：起点刚好没有任何像素在发光，终点刚好全部消失
+        // Dissolve threshold range: start just before any pixel glows, end just after everything is gone
         _pStart = vMin - edgeWidth - 0.01f;
         _pEnd = vMax + 0.03f;
         _nextSample = 0;
@@ -86,7 +86,7 @@ public class FlowerDissolve : MonoBehaviour
         IsPlaying = true;
     }
 
-    /// <summary>恢复角色原样（演示/复活用）。已经飞出去的花瓣会继续飘完。</summary>
+    /// <summary>Restore the character (demo / revive). Petals already released keep flying.</summary>
     public void ResetDissolve()
     {
         IsPlaying = false;
@@ -107,7 +107,7 @@ public class FlowerDissolve : MonoBehaviour
         if (!IsPlaying) return;
         _t += Time.deltaTime;
         float k = Mathf.Clamp01(_t / duration);
-        // 开头稍慢、结尾稍快，消散更有「被风带走」的感觉
+        // slightly slow at the start and faster at the end, so it feels carried away by the wind
         float eased = k * k * (3f - 2f * k) * 0.5f + k * 0.5f;
         float p = Mathf.Lerp(_pStart, _pEnd, eased);
         SetProgress(p);
@@ -132,7 +132,7 @@ public class FlowerDissolve : MonoBehaviour
         _particles = null;
     }
 
-    // ------------------------------------------------------------------ 溶解材质
+    // ------------------------------------------------------------------ Dissolve materials
 
     void ApplyDissolveMaterials(List<Renderer> renderers)
     {
@@ -150,7 +150,7 @@ public class FlowerDissolve : MonoBehaviour
                 var s = src[i];
                 if (s != null)
                 {
-                    // URP Lit / 大多数 shader 的常用属性名
+                    // common property names of URP Lit / most shaders
                     if (s.HasProperty("_BaseColor")) m.SetColor("_BaseColor", s.GetColor("_BaseColor"));
                     else if (s.HasProperty("_Color")) m.SetColor("_BaseColor", s.GetColor("_Color"));
                     if (s.HasProperty("_BaseMap") && s.GetTexture("_BaseMap") != null) m.SetTexture("_BaseMap", s.GetTexture("_BaseMap"));
@@ -186,11 +186,11 @@ public class FlowerDissolve : MonoBehaviour
         }
     }
 
-    // ------------------------------------------------------------------ 花瓣粒子
+    // ------------------------------------------------------------------ Petal particles
 
     void CreateParticles()
     {
-        var go = new GameObject("Petals");   // 放在场景根下，角色被 Destroy 后花瓣仍会继续飘完
+        var go = new GameObject("Petals");   // at the scene root, so petals keep flying after the character is destroyed
         go.transform.position = _root.position;
         _particles = go.AddComponent<ParticleSystem>();
         var ps = _particles;
@@ -205,7 +205,7 @@ public class FlowerDissolve : MonoBehaviour
         main.gravityModifier = 0f;
 
         var emission = ps.emission;
-        emission.enabled = false;   // 全部用 Emit() 手动发射
+        emission.enabled = false;   // everything is emitted manually with Emit()
 
         var force = ps.forceOverLifetime;
         force.enabled = true;
@@ -224,7 +224,7 @@ public class FlowerDissolve : MonoBehaviour
         noise.scrollSpeed = 0.3f;
         noise.quality = ParticleSystemNoiseQuality.Medium;
 
-        // 翻滚（弧度/秒）
+        // tumbling (radians/second)
         var rot = ps.rotationOverLifetime;
         rot.enabled = true;
         rot.separateAxes = true;
@@ -232,13 +232,13 @@ public class FlowerDissolve : MonoBehaviour
         rot.y = new ParticleSystem.MinMaxCurve(-2.5f, 2.5f);
         rot.z = new ParticleSystem.MinMaxCurve(-2.5f, 2.5f);
 
-        // 出生时从 0 弹出，最后缩小消失
+        // pop in from 0 at birth, shrink away at the end
         var size = ps.sizeOverLifetime;
         size.enabled = true;
         size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
             new Keyframe(0f, 0f), new Keyframe(0.08f, 1f), new Keyframe(0.75f, 1f), new Keyframe(1f, 0f)));
 
-        // 刚生成时偏亮（接住溶解边缘的光），随后回到本色
+        // brighter when spawned (catching the glow of the dissolve edge), then back to the base color
         var col = ps.colorOverLifetime;
         col.enabled = true;
         var life = new Gradient();
@@ -282,7 +282,7 @@ public class FlowerDissolve : MonoBehaviour
     Gradient PetalGradient()
     {
         if (petalColors != null && petalColors.colorKeys.Length > 0) return petalColors;
-        var g = new Gradient();   // 白 ~ 粉 ~ 深粉
+        var g = new Gradient();   // white ~ pink ~ deep pink
         g.SetKeys(
             new[] {
                 new GradientColorKey(new Color(1f, 0.86f, 0.91f), 0f),
@@ -292,7 +292,7 @@ public class FlowerDissolve : MonoBehaviour
         return g;
     }
 
-    /// <summary>发射所有在上一帧与这一帧之间越过溶解阈值的表面点。</summary>
+    /// <summary>Emit every surface sample that crossed the dissolve threshold between the previous frame and this one.</summary>
     void EmitCrossed(float p)
     {
         if (_particles == null) return;
@@ -303,7 +303,7 @@ public class FlowerDissolve : MonoBehaviour
             var s = _samples[_nextSample++];
             var pos = _root.TransformPoint(s.pos);
             var n = _root.TransformDirection(s.normal);
-            // 沿法线、50° 以内随机散开
+            // along the normal, scattered randomly within about 50 degrees
             var dir = Vector3.Slerp(n, UnityEngine.Random.onUnitSphere, UnityEngine.Random.value * 0.55f).normalized;
             ep.position = pos;
             ep.velocity = dir * UnityEngine.Random.Range(0.25f, 0.9f);
@@ -315,7 +315,7 @@ public class FlowerDissolve : MonoBehaviour
         }
     }
 
-    // ------------------------------------------------------------------ 表面采样（target 局部空间）
+    // ------------------------------------------------------------------ Surface sampling (target local space)
 
     float _minY, _maxY, _maxDist;
     Vector3 _origin;
@@ -335,7 +335,7 @@ public class FlowerDissolve : MonoBehaviour
             Mesh mesh; Matrix4x4 xf;
             if (r is SkinnedMeshRenderer smr)
             {
-                // 带骨骼的角色：用死亡瞬间的姿势采样，而不是 T-pose
+                // skinned characters: sample the pose at the moment of death, not the T-pose
                 mesh = new Mesh();
                 smr.BakeMesh(mesh, true);
                 xf = toLocal * Matrix4x4.TRS(smr.transform.position, smr.transform.rotation, Vector3.one);
@@ -347,7 +347,7 @@ public class FlowerDissolve : MonoBehaviour
                 mesh = mf.sharedMesh;
                 xf = toLocal * r.transform.localToWorldMatrix;
             }
-            if (!mesh.isReadable) { Debug.LogWarning($"FlowerDissolve: {r.name} 的 Mesh 没开 Read/Write，花瓣不会从它上面飘出。", r); continue; }
+            if (!mesh.isReadable) { Debug.LogWarning($"FlowerDissolve: the mesh on {r.name} is not Read/Write enabled; no petals will be emitted from it.", r); continue; }
 
             var verts = mesh.vertices;
             var idx = mesh.triangles;
@@ -370,7 +370,7 @@ public class FlowerDissolve : MonoBehaviour
             }
         }
 
-        // 按面积随机采样表面点，并算出每个点的溶解值 v；按 v 排序，之后逐个越过阈值时发射
+        // Sample surface points weighted by area, compute each point's dissolve value v, sort by v, then emit each one as the threshold passes it
         _samples.Clear();
         vMin = float.PositiveInfinity; vMax = float.NegativeInfinity;
         for (int s = 0; s < petalAmount && cum.Count > 0; s++)
@@ -388,11 +388,11 @@ public class FlowerDissolve : MonoBehaviour
             vMax = Mathf.Max(vMax, smp.value);
         }
         _samples.Sort((x, y) => x.value.CompareTo(y.value));
-        // 溶解范围用全部顶点校准，避免第 0 帧就有像素在发光
+        // calibrate the dissolve range with every vertex so no pixel glows on frame 0
         foreach (var t in tris) { float v = DissolveValue(t); vMin = Mathf.Min(vMin, v); vMax = Mathf.Max(vMax, v); }
     }
 
-    // ------------------------------------------------------------------ 与 shader 同构的噪声
+    // ------------------------------------------------------------------ Noise identical to the shader
 
     float DissolveValue(Vector3 p)
     {

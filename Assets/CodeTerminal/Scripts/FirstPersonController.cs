@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 第一人称移动：WASD 走、Shift 跑、空格跳、鼠标看、Esc 释放鼠标、左键重新锁定。
-/// 把 Main Camera 自动挂到自己下面的眼睛位置。UI 打开时把 <see cref="inputLocked"/> 设为 true 即可冻结输入。
+/// First-person movement: WASD walk, Shift sprint, Space jump, mouse look, Esc releases the cursor, left click locks it again.
+/// Parents the Main Camera at eye height automatically. Set <see cref="inputLocked"/> to true while a UI is open to freeze input.
 /// </summary>
 public class FirstPersonController : MonoBehaviour
 {
@@ -12,11 +12,11 @@ public class FirstPersonController : MonoBehaviour
     public float jumpHeight = 1.0f;
     public float gravity = -18f;
     public float mouseSensitivity = 0.08f;
-    [Tooltip("方向键转视角的速度（度/秒）")] public float keyLookSpeed = 90f;
+    [Tooltip("Look speed with the arrow keys (degrees/second)")] public float keyLookSpeed = 90f;
     public float eyeHeight = 1.62f;
-    [Tooltip("留空则用 Camera.main")] public Camera cam;
+    [Tooltip("Empty = Camera.main")] public Camera cam;
 
-    /// <summary>true 时忽略移动和视角输入（UI 打开时用）。</summary>
+    /// <summary>When true, movement and look input are ignored (used while a UI is open).</summary>
     public bool inputLocked;
 
     CharacterController _cc;
@@ -26,7 +26,7 @@ public class FirstPersonController : MonoBehaviour
     float _lockedAt = -1f;
 
     public Camera Cam => cam;
-    /// <summary>俯仰角（度，向下为正）。输入锁住时外部（如死亡演出）可以直接驱动。</summary>
+    /// <summary>Pitch (degrees, positive = down). External code (e.g. the death sequence) may drive it while input is locked.</summary>
     public float Pitch { get => _pitch; set => _pitch = value; }
     public float Yaw { get => _yaw; set => _yaw = value; }
 
@@ -57,7 +57,7 @@ public class FirstPersonController : MonoBehaviour
         if (!inputLocked && mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
             Cursor.lockState = CursorLockMode.Locked;
 
-        // 刚锁定鼠标的那几帧，系统把光标挪到屏幕中央会产生一个巨大的假位移，跳过
+        // Skip the first frames after locking: the OS warping the cursor to the center produces a huge fake delta
         bool locked = Cursor.lockState == CursorLockMode.Locked;
         if (locked && !_wasLocked) _lockedAt = Time.unscaledTime;
         _wasLocked = locked;
@@ -75,7 +75,7 @@ public class FirstPersonController : MonoBehaviour
             }
             if (kb != null)
             {
-                // 方向键也能转视角（没鼠标时用）
+                // arrow keys also turn the view (for players without a mouse)
                 float ky = (kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.leftArrowKey.isPressed ? 1f : 0f);
                 float kp = (kb.downArrowKey.isPressed ? 1f : 0f) - (kb.upArrowKey.isPressed ? 1f : 0f);
                 _yaw += ky * keyLookSpeed * Time.deltaTime;
@@ -102,7 +102,7 @@ public class FirstPersonController : MonoBehaviour
         _cc.Move(vel * Time.deltaTime);
     }
 
-    /// <summary>UI 打开/关闭时调用：冻结输入并显示/隐藏鼠标。</summary>
+    /// <summary>Call when a UI opens/closes: freezes input and shows/hides the cursor.</summary>
     public void SetInputLocked(bool locked)
     {
         inputLocked = locked;

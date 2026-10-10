@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 场景里可交互的「终端」。玩家看着它、走到 interactDistance 以内按 E，就打开 Python 编辑器并加载 track 这条关卡链。
-/// 挂到任何带 Collider 的物体上都行；没有 Renderer 的话会自己生成一个方块当占位模型。
+/// An interactable "terminal" in the scene. Look at it within interactDistance and press E to open the Python editor on this track.
+/// Attach to any object with a Collider; without a Renderer it spawns a placeholder block.
 /// </summary>
 public class CodeTerminal : MonoBehaviour
 {
-    [Tooltip("Resources/Tracks/<track>.json 里的关卡链")] public string track = "dijkstra";
+    [Tooltip("Track to open: Resources/Tracks/<track>.json")] public string track = "dijkstra";
     public float interactDistance = 3f;
     public string hint = "Press E to use the terminal";
 
@@ -22,8 +22,8 @@ public class CodeTerminal : MonoBehaviour
             cube.name = "Placeholder";
             cube.transform.SetParent(transform, false);
             cube.transform.localPosition = new Vector3(0f, 0.85f, 0f);
-            cube.transform.localScale = new Vector3(0.8f, 1.7f, 0.5f);   // 和人差不多高，平视就能对上
-            // 从 Resources 加载保证打包时 URP Lit 不被剔除（Shader.Find 在打包版里会拿到 null）
+            cube.transform.localScale = new Vector3(0.8f, 1.7f, 0.5f);   // about human height so looking straight ahead hits it
+            // load from Resources so URP Lit is not stripped from builds (Shader.Find returns null in a build)
             var m = new Material(Resources.Load<Material>("BaseLit"));
             m.SetColor("_BaseColor", new Color(0.2f, 0.75f, 0.7f));
             cube.GetComponent<Renderer>().sharedMaterial = m;
@@ -35,7 +35,7 @@ public class CodeTerminal : MonoBehaviour
         _inRange = false;
         if (CodeEditorUI.IsOpen || Camera.main == null) return;
         var cam = Camera.main.transform;
-        // 粗一点的射线，不用精确对准
+        // a thick ray so precise aiming is not needed
         if (Physics.SphereCast(cam.position, 0.3f, cam.forward, out var hit, interactDistance) && hit.collider.GetComponentInParent<CodeTerminal>() == this)
         {
             _inRange = true;
@@ -47,7 +47,7 @@ public class CodeTerminal : MonoBehaviour
     void OnGUI()
     {
         if (!_inRange) return;
-        float k = CodeEditorUI.ScaleFor(Screen.height);   // 高分屏（Retina）按比例放大
+        float k = CodeEditorUI.ScaleFor(Screen.height);   // scale up on high-DPI (Retina) screens
         _style ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
         _style.fontSize = Mathf.RoundToInt(22 * k);
         GUI.Label(new Rect(0, Screen.height * 0.6f, Screen.width, 40 * k), hint, _style);
