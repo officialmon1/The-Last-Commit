@@ -225,7 +225,8 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
         }
-        GUI.Label(new Rect(16, 12, 600, 30), _status, new GUIStyle(GUI.skin.label) { fontSize = 20, normal = { textColor = new Color(1, 1, 1, 0.9f) } });
+        float k = CodeEditorUI.ScaleFor(Screen.height);   // 高分屏（Retina）按比例放大
+        GUI.Label(new Rect(16 * k, 12 * k, 600 * k, 30 * k), _status, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(20 * k), normal = { textColor = new Color(1, 1, 1, 0.9f) } });
     }
 
     // ------------------------------------------------------------------ 场景搭建

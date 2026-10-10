@@ -36,6 +36,21 @@ public static class PythonRunner
 
     public static string PythonPath { get { Init(); return _python; } }
 
+    public const string DownloadUrl = "https://www.python.org/downloads/";
+
+    /// <summary>找不到 Python 时给玩家看的安装说明（按平台）。</summary>
+    public static string InstallHint =>
+        Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor
+            ? "Python 3 was not found on this Mac.\n" +
+              "Install it, then restart the game:\n" +
+              "  • Open Terminal and run:  xcode-select --install   (includes python3)\n" +
+              "  • or download the installer from " + DownloadUrl
+            : "Python 3 was not found on this computer.\n" +
+              "Install it, then restart the game:\n" +
+              "  • Download from " + DownloadUrl + "\n" +
+              "  • In the installer tick \"Add python.exe to PATH\"\n" +
+              "  • or run in a terminal:  winget install Python.Python.3.12";
+
     public static Task<PythonResult> RunAsync(string code, string stdin, float timeoutSeconds)
     {
         Init();
@@ -48,7 +63,7 @@ public static class PythonRunner
         var r = new PythonResult();
         if (string.IsNullOrEmpty(python))
         {
-            r.error = "找不到 Python：请安装 Python 3 并加入 PATH，或把 embeddable 包解压到 StreamingAssets/python/";
+            r.error = InstallHint;
             return r;
         }
         string file = Path.Combine(tempDir, "run_" + Guid.NewGuid().ToString("N") + ".py");

@@ -47,7 +47,9 @@ public class CodeTerminal : MonoBehaviour
     void OnGUI()
     {
         if (!_inRange) return;
-        _style ??= new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-        GUI.Label(new Rect(0, Screen.height * 0.6f, Screen.width, 40), hint, _style);
+        float k = CodeEditorUI.ScaleFor(Screen.height);   // 高分屏（Retina）按比例放大
+        _style ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
+        _style.fontSize = Mathf.RoundToInt(22 * k);
+        GUI.Label(new Rect(0, Screen.height * 0.6f, Screen.width, 40 * k), hint, _style);
     }
 }

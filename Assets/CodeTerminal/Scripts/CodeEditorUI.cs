@@ -47,18 +47,22 @@ public class CodeEditorUI : MonoBehaviour
 
     [Tooltip("整条关卡链的总时间（秒）。计时从第一次打开终端开始，游戏运行期间一直走，退出游戏暂停，存在本机存档里")]
     public int trackTimeLimitSeconds = 36 * 60;
-    public int fontSize = 18;
-    [Tooltip("整体 UI 缩放（1 = 按真实像素渲染，字最清楚）")] public float uiScale = 1f;
+    [Tooltip("1080p 屏幕上的字号；其他分辨率按屏幕高度等比换算（Retina 等高分屏会自动放大）")] public int fontSize = 18;
+    [Tooltip("额外整体缩放（1 = 不额外缩放）")] public float uiScale = 1f;
     [Tooltip("调试：按这个键直接把时间用完（看死亡演出用）")] public Key debugTimeUpKey = Key.F9;
 
     GameObject _root, _refRoot, _refBar, _choiceRoot;
     Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText;
     InputField _code, _stdin, _refField;
-    Button _runBtn, _submitBtn;
+    Button _runBtn, _submitBtn, _pyBtn;
     Transform _stageBar;
     Font _mono, _ui;
     CanvasScaler _scaler;
     int _lastScreenH;
+    float _builtScale = 1f;   // 搭界面时用的缩放，之后分辨率变了只做整体缩放
+
+    /// <summary>相对 1080p 的缩放比例（2880×1800 的 Retina ≈ 1.67）。</summary>
+    public static float ScaleFor(int screenHeight) => Mathf.Clamp(screenHeight / 1080f, 0.5f, 4f);
     CodeInputHelper _codeHelper, _stdinHelper;
 
     // 当前关卡链
@@ -86,8 +90,11 @@ public class CodeEditorUI : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        _mono = OsFont(new[] { "Consolas", "Cascadia Mono", "Courier New" }, fontSize);
-        _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "微软雅黑", "Arial" }, fontSize);
+        // 先按当前屏幕把字号和所有尺寸放大再搭界面：字体按真实像素栅格化，高分屏上也清楚
+        _builtScale = ScaleFor(Screen.height) * uiScale;
+        fontSize = Mathf.Max(8, Mathf.RoundToInt(fontSize * _builtScale));
+        _mono = OsFont(new[] { "Consolas", "Cascadia Mono", "Menlo", "Monaco", "Courier New" }, fontSize);
+        _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", "PingFang SC", "Arial" }, fontSize);
         BuildUI();
         _root.SetActive(false);
         _refRoot.SetActive(false);
@@ -95,12 +102,12 @@ public class CodeEditorUI : MonoBehaviour
         PythonRunner.Init();
     }
 
-    // 面板是按 1080p 固定排的；屏幕更矮时整体等比缩小，布局本身不变
+    // 界面按搭建时的屏幕排好；之后窗口大小变了就整体等比缩放（布局本身不变）
     void FitScale()
     {
         if (Screen.height == _lastScreenH) return;
         _lastScreenH = Screen.height;
-        _scaler.scaleFactor = uiScale * Mathf.Min(1f, Screen.height / 1080f);
+        _scaler.scaleFactor = ScaleFor(Screen.height) * uiScale / _builtScale;
     }
 
     void Update()
@@ -223,6 +230,14 @@ public class CodeEditorUI : MonoBehaviour
         _refRoot.SetActive(false);
         _status.text = _passed.Contains(p.slug) ? "Already accepted. You can still re-run or improve it."
             : "Run uses the Input box.  Submit judges with hidden input.";
+        // 没装 Python：状态栏直接说明 + 下载按钮；Output 框里放完整的安装步骤
+        bool noPython = PythonRunner.PythonPath == null;
+        _pyBtn.gameObject.SetActive(noPython);
+        if (noPython)
+        {
+            _status.text = "Python 3 not found. Click Get Python, install it, then restart the game.";
+            _output.text = PythonRunner.InstallHint;
+        }
         RefreshStageBar();
         _codeHelper.ResetHistory();
         _stdinHelper.ResetHistory();
@@ -357,7 +372,8 @@ public class CodeEditorUI : MonoBehaviour
     {
         if (!_runStarted || IsOpen) return;   // 面板开着时标题栏里已经有倒计时
         string t = TimeUp ? "Time's up" : _runCompleted ? "Completed" : $"{Mathf.CeilToInt(SecondsLeft) / 60:00}:{Mathf.CeilToInt(SecondsLeft) % 60:00}";
-        GUI.Label(new Rect(Screen.width - 200, 12, 184, 30), t, new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? new Color(1f, 0.45f, 0.4f) : Color.white } });
+        float k = ScaleFor(Screen.height);
+        GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? new Color(1f, 0.45f, 0.4f) : Color.white } });
     }
 
     // ------------------------------------------------------------------ 关卡栏 / 参考代码
@@ -517,7 +533,7 @@ public class CodeEditorUI : MonoBehaviour
         // 按真实像素渲染，动态字体就不会被放大变糊
         _scaler = canvasGo.GetComponent<CanvasScaler>();
         _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
-        _scaler.scaleFactor = uiScale;
+        _scaler.scaleFactor = 1f;
 
         // ---------- 右侧主面板（每块高度固定，内容多了在块内滚） ----------
         var panel = Panel("Panel", canvasGo.transform, new Color(0.11f, 0.12f, 0.14f, 0.96f));
@@ -527,18 +543,18 @@ public class CodeEditorUI : MonoBehaviour
         prt.anchorMax = new Vector2(0.985f, 0.97f);
         prt.offsetMin = prt.offsetMax = Vector2.zero;
         var vl = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-        vl.padding = new RectOffset(12, 12, 10, 10);
-        vl.spacing = 8;
+        vl.padding = new RectOffset(fontSize * 2 / 3, fontSize * 2 / 3, fontSize / 2, fontSize / 2);
+        vl.spacing = fontSize / 2;
         vl.childControlWidth = vl.childControlHeight = true;
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
 
         // 标题 + 倒计时
-        var header = Row("Header", panel.transform, 30);
+        var header = Row("Header", panel.transform, fontSize * 1.7f);
         _title = Label("Title", header, _ui, fontSize + 4, Color.white, TextAnchor.MiddleLeft);
         _title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
         _timerLabel = Label("Timer", header, _mono, fontSize + 2, Color.white, TextAnchor.MiddleRight);
-        _timerLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 160;
+        _timerLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 9;
 
         // 关卡栏
         _stageBar = Row("Stages", panel.transform, fontSize * 2);
@@ -576,8 +592,15 @@ public class CodeEditorUI : MonoBehaviour
         _submitBtn = MakeButton("Submit", bar, "Submit", () => RunCode(true), new Color(0.2f, 0.55f, 0.35f));
         MakeButton("Close", bar, "Close (Esc)", Close, new Color(0.35f, 0.35f, 0.4f));
         _refBar = Row("RefBar", panel.transform, fontSize * 1.8f).gameObject;
-        _status = Label("Status", panel.transform, _ui, fontSize - 1, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
-        Fix(_status.gameObject, fontSize * 1.5f);
+        var statusRow = Row("StatusRow", panel.transform, fontSize * 1.6f);
+        _status = Label("Status", statusRow, _ui, fontSize - 1, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
+        _status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        // 没装 Python 时才显示：一键打开下载页
+        _pyBtn = MakeButton("GetPython", statusRow, "Get Python", () => Application.OpenURL(PythonRunner.DownloadUrl), new Color(0.75f, 0.45f, 0.2f));
+        var pyLe = _pyBtn.GetComponent<LayoutElement>();
+        pyLe.flexibleWidth = 0;
+        pyLe.preferredWidth = fontSize * 8;
+        _pyBtn.gameObject.SetActive(false);
 
         // ---------- 继续 / 重新开始（盖在主面板上） ----------
         var choice = Panel("Choice", canvasGo.transform, new Color(0.08f, 0.09f, 0.11f, 0.98f));
@@ -587,8 +610,8 @@ public class CodeEditorUI : MonoBehaviour
         crt.anchorMax = new Vector2(0.985f, 0.62f);
         crt.offsetMin = crt.offsetMax = Vector2.zero;
         var cvl = choice.gameObject.AddComponent<VerticalLayoutGroup>();
-        cvl.padding = new RectOffset(24, 24, 20, 20);
-        cvl.spacing = 16;
+        cvl.padding = new RectOffset(fontSize * 4 / 3, fontSize * 4 / 3, fontSize, fontSize);
+        cvl.spacing = fontSize;
         cvl.childControlWidth = cvl.childControlHeight = true;
         cvl.childForceExpandWidth = true;
         cvl.childForceExpandHeight = false;
@@ -606,13 +629,13 @@ public class CodeEditorUI : MonoBehaviour
         rrt.anchorMax = new Vector2(0.515f, 0.97f);
         rrt.offsetMin = rrt.offsetMax = Vector2.zero;
         var rvl = refPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        rvl.padding = new RectOffset(12, 12, 10, 10);
-        rvl.spacing = 8;
+        rvl.padding = new RectOffset(fontSize * 2 / 3, fontSize * 2 / 3, fontSize / 2, fontSize / 2);
+        rvl.spacing = fontSize / 2;
         rvl.childControlWidth = rvl.childControlHeight = true;
         rvl.childForceExpandWidth = true;
         rvl.childForceExpandHeight = false;
         _refTitle = Label("Title", refPanel.transform, _ui, fontSize + 2, Color.white, TextAnchor.MiddleLeft);
-        Fix(_refTitle.gameObject, 30);
+        Fix(_refTitle.gameObject, fontSize * 1.7f);
         _refField = MakeInputField("RefCode", refPanel.transform, "");
         _refField.readOnly = true;
         _refField.gameObject.AddComponent<CodeInputHelper>().autoIndent = false;   // 负责按内容撑高度 + 滚轮
@@ -636,7 +659,7 @@ public class CodeEditorUI : MonoBehaviour
         var go = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
         go.transform.SetParent(parent, false);
         var hl = go.GetComponent<HorizontalLayoutGroup>();
-        hl.spacing = 8;
+        hl.spacing = 6;
         hl.childControlWidth = hl.childControlHeight = true;
         hl.childForceExpandWidth = false;
         hl.childForceExpandHeight = true;
@@ -668,7 +691,7 @@ public class CodeEditorUI : MonoBehaviour
         var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
         viewport.transform.SetParent(box.transform, false);
         var vrt = (RectTransform)viewport.transform;
-        Stretch(vrt, 8);
+        Stretch(vrt, size / 2f);
         var t = Label("Text", viewport.transform, font, size, color, TextAnchor.UpperLeft);
         t.verticalOverflow = VerticalWrapMode.Overflow;
         var trt = t.rectTransform;
@@ -711,7 +734,7 @@ public class CodeEditorUI : MonoBehaviour
         var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
         viewport.transform.SetParent(bg.transform, false);
         var vrt = (RectTransform)viewport.transform;
-        Stretch(vrt, 8);
+        Stretch(vrt, fontSize / 2f);
         var text = Label("Text", viewport.transform, _mono, fontSize, new Color(0.92f, 0.93f, 0.9f), TextAnchor.UpperLeft);
         text.verticalOverflow = VerticalWrapMode.Overflow;
         var trt = text.rectTransform;
