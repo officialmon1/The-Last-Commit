@@ -8,6 +8,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Panda;
+using Process = System.Diagnostics.Process;
+using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
 
 namespace PandaEditor
 {
@@ -42,6 +44,43 @@ namespace PandaEditor
                 Require((string)find.Invoke(null, new object[] { path }) == expected, "Local build backend lookup failed: " + path);
             Debug.Log("PANDA_BACKEND_PATH_CHECK_PASSED");
         }
+
+#if UNITY_EDITOR_WIN
+        [MenuItem("Tools/Panda/Check Python process cleanup")]
+        static async void RunShutdownMenu() => Debug.Log(await CheckBackendShutdown());
+
+        public static async Task<string> CheckBackendShutdown()
+        {
+            Require(!EditorApplication.isPlaying, "Stop Play before checking process cleanup.");
+            var python = Path.Combine(Directory.GetParent(Application.dataPath).FullName,
+                "panda-service", ".venv", "Scripts", "python.exe");
+            var obj = new GameObject("Panda process check") { hideFlags = HideFlags.HideAndDontSave };
+            var service = obj.AddComponent<PandaService>();
+            Process child = null;
+            try
+            {
+                var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = python,
+                    Arguments = "-c \"import os,time; print(os.getpid(),flush=True); time.sleep(60)\"",
+                    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
+                });
+                Set(service, "_process", process);
+                var output = process.StandardOutput.ReadLineAsync();
+                await Until(() => output.IsCompleted);
+                child = Process.GetProcessById(int.Parse(await output));
+                Call(service, "StopBackend");
+                Require(child.WaitForExit(5000), "The venv interpreter survived backend shutdown.");
+                return "PANDA_BACKEND_SHUTDOWN_CHECK_PASSED";
+            }
+            finally
+            {
+                Call(service, "StopBackend");
+                if (child != null) { if (!child.HasExited) child.Kill(); child.Dispose(); }
+                UnityEngine.Object.DestroyImmediate(obj);
+            }
+        }
+#endif
 
         // Uses the real Dijkstra problems with a unique temporary save; existing player saves are untouched.
         public static async Task<string> Run()
