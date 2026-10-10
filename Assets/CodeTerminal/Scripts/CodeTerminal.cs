@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 场景里可交互的「终端」。玩家看着它、走到 interactDistance 以内按 E，就打开 Python 编辑器并加载 problemSlug 这道题。
+/// 场景里可交互的「终端」。玩家看着它、走到 interactDistance 以内按 E，就打开 Python 编辑器并加载 track 这条关卡链。
 /// 挂到任何带 Collider 的物体上都行；没有 Renderer 的话会自己生成一个方块当占位模型。
 /// </summary>
 public class CodeTerminal : MonoBehaviour
 {
-    [Tooltip("Neon problems 表里的 slug")] public string problemSlug = "sample-min-path";
+    [Tooltip("Neon problems 表里的 track（同 track 的题按 stage 排成一串关卡）")] public string track = "dijkstra";
     public float interactDistance = 3f;
     public string hint = "Press E to use the terminal";
 
@@ -23,10 +23,9 @@ public class CodeTerminal : MonoBehaviour
             cube.transform.SetParent(transform, false);
             cube.transform.localPosition = new Vector3(0f, 0.85f, 0f);
             cube.transform.localScale = new Vector3(0.8f, 1.7f, 0.5f);   // 和人差不多高，平视就能对上
-            var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            m.SetColor("_BaseColor", new Color(0.15f, 0.6f, 0.55f));
-            m.SetColor("_EmissionColor", new Color(0.1f, 0.5f, 0.45f));
-            m.EnableKeyword("_EMISSION");
+            // 从 Resources 加载保证打包时 URP Lit 不被剔除（Shader.Find 在打包版里会拿到 null）
+            var m = new Material(Resources.Load<Material>("BaseLit"));
+            m.SetColor("_BaseColor", new Color(0.2f, 0.75f, 0.7f));
             cube.GetComponent<Renderer>().sharedMaterial = m;
         }
     }
@@ -41,7 +40,7 @@ public class CodeTerminal : MonoBehaviour
         {
             _inRange = true;
             var kb = Keyboard.current;
-            if (kb != null && kb.eKey.wasPressedThisFrame && CodeEditorUI.Instance != null) CodeEditorUI.Instance.Open(problemSlug);
+            if (kb != null && kb.eKey.wasPressedThisFrame && CodeEditorUI.Instance != null) CodeEditorUI.Instance.Open(track);
         }
     }
 

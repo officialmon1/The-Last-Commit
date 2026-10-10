@@ -62,6 +62,13 @@ public static class NeonDb
 
     public static Task Exec(string sql, params string[] args) => Query(sql, args);
 
+    /// <summary>同步版，给 OnApplicationQuit 用：最多等 timeoutMs，超时就放弃（不阻塞退出）。</summary>
+    public static void ExecBlocking(string sql, int timeoutMs, params string[] args)
+    {
+        try { Query(sql, args).Wait(timeoutMs); }
+        catch (Exception e) { Debug.LogWarning("NeonDb: 退出时写库失败：" + e.Message); }
+    }
+
     static string Json(string s)
     {
         var sb = new StringBuilder("\"");

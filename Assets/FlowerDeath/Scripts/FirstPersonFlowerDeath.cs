@@ -89,6 +89,16 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         _dissolve.DissolveFinished += () => _status = "已消散。按 R 复活";
 
         _status = "K：死亡   R：复活";
+        CodeEditorUI.TrackTimeUp += OnTrackTimeUp;   // 36 分钟用完 → 死
+    }
+
+    void OnDestroy() => CodeEditorUI.TrackTimeUp -= OnTrackTimeUp;
+
+    void OnTrackTimeUp(string track)
+    {
+        if (_dead) return;
+        if (CodeEditorUI.IsOpen) CodeEditorUI.Instance.Close();
+        StartCoroutine(Die());
     }
 
     void Update()
@@ -204,6 +214,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         _pitch = 4f;
         if (_fpc != null) { _fpc.Pitch = _pitch; _fpc.inputLocked = false; }
         _status = "K：死亡   R：复活";
+        if (CodeEditorUI.Instance != null) CodeEditorUI.Instance.RestartRun();   // 复活 = 重新一整段时间
     }
 
     void OnGUI()
@@ -221,7 +232,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
 
     static Material Lit(Color c, float smooth = 0.3f)
     {
-        var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        var m = new Material(Resources.Load<Material>("BaseLit"));   // Resources 里的 URP Lit 材质，保证打包时 shader 不被剔除
         m.SetColor("_BaseColor", c);
         m.SetFloat("_Smoothness", smooth);
         return m;

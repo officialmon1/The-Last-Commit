@@ -38,7 +38,7 @@ public class FlowerDissolve : MonoBehaviour
     [Tooltip("场景里有 Collider 时，花瓣会落在上面。")]
     public bool petalsCollide = true;
 
-    [Header("Shaders (留空则 Shader.Find)")]
+    [Header("Shaders (留空则从 FlowerDeath/Resources 加载)")]
     [SerializeField] Shader dissolveShader;
     [SerializeField] Shader petalShader;
 
@@ -136,7 +136,7 @@ public class FlowerDissolve : MonoBehaviour
 
     void ApplyDissolveMaterials(List<Renderer> renderers)
     {
-        var shader = dissolveShader != null ? dissolveShader : Shader.Find("FlowerDeath/Dissolve");
+        var shader = dissolveShader != null ? dissolveShader : Resources.Load<Shader>("FlowerDissolve");
         _saved.Clear();
         _materials.Clear();
         foreach (var r in renderers)
@@ -263,7 +263,7 @@ public class FlowerDissolve : MonoBehaviour
         r.renderMode = ParticleSystemRenderMode.Mesh;
         r.alignment = ParticleSystemRenderSpace.World;
         r.mesh = PetalQuad();
-        r.sharedMaterial = new Material(petalShader != null ? petalShader : Shader.Find("FlowerDeath/Petal"));
+        r.sharedMaterial = new Material(petalShader != null ? petalShader : Resources.Load<Shader>("Petal"));
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         ps.Play();
     }

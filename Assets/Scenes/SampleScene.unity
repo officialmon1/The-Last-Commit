@@ -566,7 +566,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64a7b8c9d0e1f2a3b4c02, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  problemSlug: a-plus-b
+  track: dijkstra
   interactDistance: 3
   hint: Press E to use the terminal
 --- !u!1 &1719430301
