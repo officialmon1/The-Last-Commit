@@ -33,11 +33,11 @@ namespace Panda
 
         [Header("Terminal wait spot (pinned on screen, bottom-left; may hover above the ground, never sinks below it)")]
         [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit while the code editor is open.")]
-        public float editorWaitViewportX = 0.12f;
-        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit.")]
-        public float editorWaitViewportY = 0.05f;
-        [Tooltip("How far in front of the camera (metres): closer = bigger on screen.")]
-        public float editorWaitDepth = 1.9f;
+        public float editorWaitViewportX = 0.22f;
+        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit; 0.15 keeps the whole body in view.")]
+        public float editorWaitViewportY = 0.15f;
+        [Tooltip("How far in front of the camera (metres): closer = bigger on screen. Keep this closer than a pillar is ever stood next to, so the pillar can't hide the panda (CodeTerminal steps the player back to this distance).")]
+        public float editorWaitDepth = 2.3f;
 
         [Header("Movement")]
         public float patrolDistance = 1.5f;
@@ -165,7 +165,7 @@ namespace Panda
             if (cam == null) return FollowSpot();
             Vector3 spot = cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
             float ground = GroundSnap(spot).y;
-            if (spot.y < ground) spot.y = ground;
+            if (spot.y < ground) spot.y = ground;   // may hover above the ground, but never sink into it when the player looks down
             return spot;
         }
 
