@@ -116,7 +116,7 @@ public class CodeTerminal : MonoBehaviour
     {
         if (!_inRange) return;
         float k = CodeEditorUI.ScaleFor(Screen.height);   // scale up on high-DPI (Retina) screens
-        _style ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
+        _style ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, normal = { textColor = ForestTheme.TextCream }, font = ForestTheme.ElegantFont() };
         _style.fontSize = Mathf.RoundToInt(22 * k);
         string hint = finalProblem && _stateShown == 0
             ? $"Final problem locked ({CodeEditorUI.Instance?.PrerequisitesPassed(track) ?? 0}/{level - 1}) - Complete the four nearby pillars first"

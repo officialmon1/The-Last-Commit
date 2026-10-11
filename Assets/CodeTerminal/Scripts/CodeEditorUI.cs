@@ -60,7 +60,7 @@ public class CodeEditorUI : MonoBehaviour
     [Tooltip("Debug: press this key to use up the timer immediately (to preview the death sequence)")] public Key debugTimeUpKey = Key.F9;
 
     GameObject _root, _refRoot, _refBar, _choiceRoot, _hintsRoot;
-    Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText, _hintsTitle, _hintsText;
+    Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceBanner, _choiceText, _hintsTitle, _hintsText;
     InputField _code, _stdin, _refField;
     Button _runBtn, _submitBtn, _pyBtn, _choiceBtn1, _choiceBtn2;
     Font _mono, _ui;
@@ -171,7 +171,10 @@ public class CodeEditorUI : MonoBehaviour
         _builtScale = ScaleFor(Screen.height) * uiScale;
         fontSize = Mathf.Max(8, Mathf.RoundToInt(fontSize * _builtScale));
         _mono = OsFont(new[] { "Consolas", "Cascadia Mono", "Menlo", "Monaco", "Courier New" }, fontSize);
-        _ui = OsFont(new[] { "Segoe UI", "Microsoft YaHei", "Helvetica Neue", "PingFang SC", "Arial" }, fontSize);
+        // the same storybook font family as the speech bubble, for every label/button/description here;
+        // code itself stays on _mono above, since a flourished font would hurt readability there
+        _ui = OsFont(new[] { "Papyrus", "Herculanum", "Chalkboard SE", "Baskerville", "Georgia", "Garamond", "Segoe Script",
+            "Segoe UI", "Microsoft YaHei", "Helvetica Neue", "PingFang SC", "Arial" }, fontSize);
         BuildUI();
         _root.SetActive(false);
         _refRoot.SetActive(false);
@@ -245,7 +248,7 @@ public class CodeEditorUI : MonoBehaviour
                 int left = Mathf.Max(0, trackTimeLimitSeconds - Mathf.CeilToInt(save.elapsedSeconds));
                 _pendingSave = save;
                 _pendingStage = stage;
-                ShowChoice($"Saved game found: {save.passed.Count}/{_problems.Count} levels cleared, {left / 60:00}:{left % 60:00} left.",
+                ShowChoice("Welcome Back", $"Saved game found: {save.passed.Count}/{_problems.Count} levels cleared, {left / 60:00}:{left % 60:00} left.",
                     "Continue", ChooseContinue, ForestAccentSubmit, "New game", ChooseNewGame, new Color(0.55f, 0.28f, 0.24f));
                 return;
             }
@@ -291,8 +294,9 @@ public class CodeEditorUI : MonoBehaviour
     }
 
     /// <summary>The two-button overlay on top of the panel (Continue / New game, Accepted / Keep editing).</summary>
-    void ShowChoice(string text, string label1, Action on1, Color color1, string label2, Action on2, Color color2)
+    void ShowChoice(string banner, string text, string label1, Action on1, Color color1, string label2, Action on2, Color color2)
     {
+        _choiceBanner.text = banner;
         _choiceText.text = text;
         SetChoiceButton(_choiceBtn1, label1, on1, color1);
         SetChoiceButton(_choiceBtn2, label2, on2, color2);
@@ -486,7 +490,7 @@ public class CodeEditorUI : MonoBehaviour
         if (!_runStarted || IsOpen) return;   // the panel header already shows the countdown while open
         string t = TimeUp ? "Time's up" : _runCompleted ? "Completed" : $"{Mathf.CeilToInt(SecondsLeft) / 60:00}:{Mathf.CeilToInt(SecondsLeft) % 60:00}";
         float k = ScaleFor(Screen.height);
-        GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? ForestDanger : ForestTextCream } });
+        GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), font = _ui, alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? ForestDanger : ForestTextCream } });
     }
 
     // ------------------------------------------------------------------ Ref bar / hints / reference code
@@ -615,7 +619,8 @@ public class CodeEditorUI : MonoBehaviour
             SaveLocal();
             ReportToPanda(true);
             if (allDone && first) TrackCompleted?.Invoke(_track);
-            ShowChoice(allDone ? $"✓ Accepted!  Level {_current + 1} cleared.\nAll {_problems.Count} levels are done, well played!"
+            ShowChoice(allDone ? "All Levels Cleared" : "Level Cleared",
+                allDone ? $"✓ Accepted!  Level {_current + 1} cleared.\nAll {_problems.Count} levels are done, well played!"
                     : $"✓ Accepted!  Level {_current + 1} cleared  ({_passed.Count}/{_problems.Count} done).\nLeave and walk to another pillar for the next level.",
                 "Leave terminal", () => { _choiceRoot.SetActive(false); Close(); }, ForestAccentSubmit,
                 "Keep editing", () => _choiceRoot.SetActive(false), ForestAccentClose);
@@ -783,10 +788,17 @@ public class CodeEditorUI : MonoBehaviour
         crt.offsetMin = crt.offsetMax = Vector2.zero;
         var cvl = choice.gameObject.AddComponent<VerticalLayoutGroup>();
         cvl.padding = new RectOffset(fontSize * 4 / 3, fontSize * 4 / 3, fontSize, fontSize);
-        cvl.spacing = fontSize;
+        cvl.spacing = fontSize * 2 / 3;
         cvl.childControlWidth = cvl.childControlHeight = true;
         cvl.childForceExpandWidth = true;
         cvl.childForceExpandHeight = false;
+        var banner = Panel("ChoiceBanner", choice.transform, ForestAccentHint);
+        Fix(banner.gameObject, fontSize * 1.9f);
+        _choiceBanner = Label("BannerText", banner.transform, _ui, fontSize + 3, new Color(0.16f, 0.1f, 0.04f), TextAnchor.MiddleCenter);
+        _choiceBanner.fontStyle = FontStyle.Bold;
+        Stretch(_choiceBanner.rectTransform, 4);
+        ForestTheme.AddLeafAccent(banner.transform, new Vector2(0f, 0.5f), new Vector2(10f, 0f));
+        ForestTheme.AddLeafAccent(banner.transform, new Vector2(1f, 0.5f), new Vector2(-10f, 0f));
         _choiceText = Label("Text", choice.transform, _ui, fontSize + 2, ForestTextCream, TextAnchor.MiddleCenter);
         _choiceText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
         var cbar = Row("Bar", choice.transform, fontSize * 2.4f);

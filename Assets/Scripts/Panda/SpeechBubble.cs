@@ -5,7 +5,8 @@ using UnityEngine.UI;
 namespace Panda
 {
     /// <summary>
-    /// Screen-space bubble showing what the panda is "saying", with up to two reply buttons.
+    /// Screen-space bubble showing what the panda is "saying", with up to two reply buttons, in the forest/amber
+    /// theme (amber frame, green parchment fill, storybook font, leaf accents).
     /// Floats above <see cref="anchor"/>'s head while it's walking/following (smoothed, so the text does not shake);
     /// while the code editor is open the panda is parked in the bottom-left corner and the bubble is pinned to the
     /// top-right of the free area instead. Docks to a corner if the panda is off screen.
@@ -45,8 +46,61 @@ namespace Panda
             _dockAnchorMin = _rect.anchorMin;
             _dockAnchorMax = _rect.anchorMax;
             _dockPos = _rect.anchoredPosition;
+            ApplyForestTheme();
             BuildTail();
+            BuildVineAccents();
             ShowText(IdleText);
+        }
+
+        /// <summary>Forest-green parchment bubble with an amber border, cream text and warmer button colours.</summary>
+        void ApplyForestTheme()
+        {
+            // the root's own Image becomes the amber frame; children always render on top of their parent in
+            // Unity UI, so the inset green "fill" below has to be a child of it to appear layered correctly
+            var root = GetComponent<Image>();
+            if (root != null)
+            {
+                root.color = ForestTheme.Amber;
+                root.sprite = ForestTheme.PanelSprite;
+                root.type = Image.Type.Sliced;
+            }
+
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(transform, false);
+            fill.transform.SetAsFirstSibling();
+            var fillImg = fill.GetComponent<Image>();
+            fillImg.color = ForestTheme.PanelBg;
+            fillImg.sprite = ForestTheme.PanelSprite;
+            fillImg.type = Image.Type.Sliced;
+            fillImg.raycastTarget = false;
+            var frt = (RectTransform)fill.transform;
+            frt.anchorMin = Vector2.zero;
+            frt.anchorMax = Vector2.one;
+            frt.offsetMin = new Vector2(4f, 4f);
+            frt.offsetMax = new Vector2(-4f, -4f);
+
+            var font = ForestTheme.ElegantFont();
+            Style(bubbleText, font, ForestTheme.TextCream);
+            Style(button1Label, font, ForestTheme.TextCream);
+            Style(button2Label, font, ForestTheme.TextCream);
+            var img1 = button1 != null ? button1.GetComponent<Image>() : null;
+            if (img1 != null) img1.color = ForestTheme.AccentGreen;
+            var img2 = button2 != null ? button2.GetComponent<Image>() : null;
+            if (img2 != null) img2.color = ForestTheme.AccentMuted;
+        }
+
+        static void Style(Text t, Font font, Color color)
+        {
+            if (t == null) return;
+            if (font != null) t.font = font;
+            t.color = color;
+        }
+
+        /// <summary>Two small amber "leaf" dots in the top corners -- a light vine-like flourish without needing art assets.</summary>
+        void BuildVineAccents()
+        {
+            ForestTheme.AddLeafAccent(transform, new Vector2(0f, 1f), new Vector2(10f, -8f));
+            ForestTheme.AddLeafAccent(transform, new Vector2(1f, 1f), new Vector2(-10f, -8f));
         }
 
         void BuildTail()
@@ -54,8 +108,7 @@ namespace Panda
             var go = new GameObject("Tail", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(transform, false);
             go.transform.SetAsFirstSibling(); // behind the text and buttons
-            var bg = GetComponent<Image>();
-            go.GetComponent<Image>().color = bg != null ? bg.color : Color.white;
+            go.GetComponent<Image>().color = ForestTheme.PanelBg; // matches the green fill, not the amber frame
             go.GetComponent<Image>().raycastTarget = false;
             _tail = (RectTransform)go.transform;
             _tail.anchorMin = _tail.anchorMax = new Vector2(0.5f, 0f);
