@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Panda
 {
     /// <summary>
-    /// Lives on the 3D panda. Follows the player around (or patrols side to side if there is
-    /// no player), reacts to the backend's live face/hand read of the player (mirrors the
+    /// Lives on the 3D panda. Waits beside the player and, once they walk out of its circle, runs ahead
+    /// to lead the way (or patrols side to side if there is no player); reacts to the backend's live face/hand read of the player (mirrors the
     /// HELP_* / PROGRESS offers from the web prototype), and asks the backend for a hint when clicked.
     /// Before hinting it judges the code quietly: a solution that already passes gets "go submit"
     /// instead of a hint. Hint history is kept per level by CodeEditorUI (shown in its hints panel,
@@ -21,8 +21,9 @@ namespace Panda
         [Tooltip("Where the panda stands relative to the player: x = right, z = forward. Kept fairly far forward " +
                  "so it stays inside the camera's view instead of drifting out to the side and off screen.")]
         public Vector3 followOffset = new Vector3(-1.1f, 0f, 2.3f);
-        [Tooltip("Only start walking once the panda is this far from its spot (stops it jittering).")]
-        public float followSlack = 0.6f;
+        [Tooltip("The panda waits still while the player is within this many metres of it (turning around or walking past it does nothing); " +
+                 "once the player is further away it runs to the spot ahead of them and waits there again.")]
+        public float waitRadius = 3f;
         public float followSpeed = 4.5f;
         public float turnSpeed = 6f;
 
@@ -33,8 +34,8 @@ namespace Panda
         [Header("Terminal wait spot (pinned to a fixed spot on screen)")]
         [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit.")]
         public float editorWaitViewportX = 0.22f;
-        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit.")]
-        public float editorWaitViewportY = 0.15f;
+        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit. Slightly negative parks it low in the corner with its legs off screen.")]
+        public float editorWaitViewportY = -0.1f;
         [Tooltip("How far in front of the camera (metres) that spot sits. Keep this closer than terminals are " +
                  "ever stood next to, so the panda is never hidden behind one -- bring it closer (and it'll " +
                  "happily overlap the terminal) rather than push it back and risk it vanishing behind geometry.")]
@@ -58,6 +59,7 @@ namespace Panda
         Vector3 _groundPos;
         float _feetOffset; // how far the pivot sits above the model's feet
         bool _walking;
+        Quaternion _idleFacing;   // where the panda turned to when it stopped (toward the player at that moment); it does not track the player afterwards
         long _currentOfferId = -1;
         long _handledId = 0;
         bool _hinting;
@@ -84,7 +86,10 @@ namespace Panda
             {
                 _groundPos = FollowSpot();
                 transform.position = _groundPos;
+                Vector3 toPlayer = followTarget.position - _groundPos; toPlayer.y = 0f;
+                if (toPlayer.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix;
             }
+            _idleFacing = transform.rotation;
             if (speechBubble != null && speechBubble.anchor == null) speechBubble.anchor = transform;
             if (PandaService.Instance != null)
             {
@@ -196,15 +201,30 @@ namespace Panda
                 return;
             }
 
+            // Wait quietly while the player is inside the circle: turning around or walking right past the panda
+            // must not move it. Only once they are further away does it run to the spot ahead of them and park again.
+            Vector3 toPlayer = followTarget.position - _groundPos; toPlayer.y = 0f;
+            if (!_walking)
+            {
+                if (toPlayer.magnitude < waitRadius)
+                {
+                    transform.position = _groundPos + Vector3.up * _feetOffset;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, _idleFacing, Time.deltaTime * turnSpeed);
+                    return;
+                }
+                _walking = true;
+            }
+
             Vector3 spot = FollowSpot();
             Vector3 flat = spot - _groundPos; flat.y = 0f;
             float dist = flat.magnitude;
-
-            // walk over once we've fallen behind, stop when we're close again
-            if (dist > followSlack) _walking = true;
-            else if (dist < 0.1f) _walking = false;
-
-            if (_walking)
+            if (dist < 0.1f)
+            {
+                // arrived ahead of the player: turn to face them once, then hold still until they wander off again
+                _walking = false;
+                _idleFacing = toPlayer.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix : transform.rotation;
+            }
+            else
             {
                 // speed up if the player sprinted far ahead, so we never get lost
                 float speed = followSpeed * Mathf.Max(1f, dist / 2f);
@@ -217,12 +237,10 @@ namespace Panda
             float bob = _walking ? Mathf.Abs(Mathf.Sin(Time.time * bobSpeed * 4f)) * bobHeight : 0f;
             transform.position = _groundPos + Vector3.up * (bob + _feetOffset);
 
-            // face where we're walking, otherwise turn to look at the player
-            Vector3 lookDir = _walking ? flat : followTarget.position - transform.position;
-            lookDir.y = 0f;
-            if (lookDir.sqrMagnitude > 0.0001f)
+            // face where we're walking
+            if (_walking && flat.sqrMagnitude > 0.0001f)
             {
-                var look = Quaternion.LookRotation(lookDir, Vector3.up) * ModelUpFix;
+                var look = Quaternion.LookRotation(flat, Vector3.up) * ModelUpFix;
                 transform.rotation = Quaternion.Slerp(transform.rotation, look, Time.deltaTime * turnSpeed);
             }
         }
