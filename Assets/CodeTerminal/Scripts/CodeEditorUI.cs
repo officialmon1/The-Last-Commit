@@ -66,6 +66,52 @@ public class CodeEditorUI : MonoBehaviour
     Font _mono, _ui;
     CanvasScaler _scaler;
     int _lastScreenH;
+
+    // ---------------- Forest theme palette ----------------
+    static readonly Color ForestPanelBg = new Color(0.086f, 0.129f, 0.110f, 0.97f);
+    static readonly Color ForestBoxBg = new Color(0.118f, 0.169f, 0.137f);
+    static readonly Color ForestInputBg = new Color(0.071f, 0.102f, 0.082f);
+    static readonly Color ForestOutputBg = new Color(0.055f, 0.075f, 0.062f);
+    static readonly Color ForestTextCream = new Color(0.945f, 0.914f, 0.824f);
+    static readonly Color ForestTextMuted = new Color(0.749f, 0.796f, 0.722f);
+    static readonly Color ForestAccentRun = new Color(0.435f, 0.635f, 0.529f);
+    static readonly Color ForestAccentSubmit = new Color(0.235f, 0.431f, 0.294f);
+    static readonly Color ForestAccentHint = new Color(0.816f, 0.573f, 0.231f);
+    static readonly Color ForestAccentClose = new Color(0.357f, 0.322f, 0.278f);
+    static readonly Color ForestAccentRef = new Color(0.47f, 0.38f, 0.29f);
+    static readonly Color ForestDanger = new Color(0.86f, 0.42f, 0.33f);
+    static readonly Color ForestStageLocked = new Color(0.173f, 0.192f, 0.165f);
+    static readonly Color ForestStageUnlocked = new Color(0.267f, 0.29f, 0.251f);
+    static readonly Color ForestStageCurrent = new Color(0.737f, 0.584f, 0.263f);
+    static readonly Color ForestStagePassed = new Color(0.306f, 0.486f, 0.337f);
+    static Sprite _roundedSprite;
+    static Sprite RoundedSprite => _roundedSprite ??= MakeRoundedSprite(32, 9);
+
+    /// <summary>A small 9-sliced rounded-rect sprite, generated once at runtime (no project assets needed).</summary>
+    static Sprite MakeRoundedSprite(int size, int radius)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        var pixels = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(RoundedCornerAlpha(x, y, size, radius) * 255f));
+        tex.SetPixels32(pixels);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
+            SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+    }
+
+    static float RoundedCornerAlpha(int x, int y, int size, int radius)
+    {
+        float fx = x + 0.5f, fy = y + 0.5f;
+        bool inCornerX = fx < radius || fx > size - radius;
+        bool inCornerY = fy < radius || fy > size - radius;
+        if (!(inCornerX && inCornerY)) return 1f;
+        float cx = fx < radius ? radius : size - radius;
+        float cy = fy < radius ? radius : size - radius;
+        float dist = Mathf.Sqrt((fx - cx) * (fx - cx) + (fy - cy) * (fy - cy));
+        return Mathf.Clamp01(radius - dist + 0.5f);
+    }
     float _builtScale = 1f;   // scale used when the UI was built; later resolution changes only rescale the canvas
 
     /// <summary>Scale relative to 1080p (a 2880x1800 Retina display is about 1.67).</summary>
@@ -140,7 +186,7 @@ public class CodeEditorUI : MonoBehaviour
             if (_refRoot.activeSelf) FocusIfHit(_refField, p);
         }
         _timerLabel.text = TimeUp ? "Time's up" : _runCompleted ? "Completed" : $"{Mathf.CeilToInt(SecondsLeft) / 60:00}:{Mathf.CeilToInt(SecondsLeft) % 60:00} left";
-        _timerLabel.color = SecondsLeft < 30f ? new Color(1f, 0.45f, 0.4f) : Color.white;
+        _timerLabel.color = SecondsLeft < 30f ? ForestDanger : ForestTextCream;
         _runBtn.interactable = !_running && _problem != null;
         _submitBtn.interactable = !_running && _problem != null && !TimeUp;
     }
@@ -395,7 +441,7 @@ public class CodeEditorUI : MonoBehaviour
         if (!_runStarted || IsOpen) return;   // the panel header already shows the countdown while open
         string t = TimeUp ? "Time's up" : _runCompleted ? "Completed" : $"{Mathf.CeilToInt(SecondsLeft) / 60:00}:{Mathf.CeilToInt(SecondsLeft) % 60:00}";
         float k = ScaleFor(Screen.height);
-        GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? new Color(1f, 0.45f, 0.4f) : Color.white } });
+        GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? ForestDanger : ForestTextCream } });
     }
 
     // ------------------------------------------------------------------ Stage bar / reference code
@@ -416,17 +462,17 @@ public class CodeEditorUI : MonoBehaviour
         {
             int idx = i;
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
-            _stageBtns.Add(MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), Color.gray));
+            _stageBtns.Add(MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), ForestStageLocked));
         }
         // Ref buttons: view your own accepted solutions from earlier stages
         ClearChildren(_refBar.transform);
-        var lbl = Label("RefLabel", _refBar.transform, _ui, fontSize - 2, new Color(0.7f, 0.7f, 0.7f), TextAnchor.MiddleLeft);
+        var lbl = Label("RefLabel", _refBar.transform, _ui, fontSize - 2, ForestTextMuted, TextAnchor.MiddleLeft);
         lbl.text = "Your earlier solutions:";
         lbl.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 10;
         for (int i = 0; i < _problems.Count - 1; i++)
         {
             int idx = i;
-            MakeButton("Ref" + i, _refBar.transform, $"Ref {i + 1}", () => ShowReference(idx), new Color(0.4f, 0.35f, 0.6f));
+            MakeButton("Ref" + i, _refBar.transform, $"Ref {i + 1}", () => ShowReference(idx), ForestAccentRef);
         }
     }
 
@@ -438,7 +484,7 @@ public class CodeEditorUI : MonoBehaviour
             bool passed = _passed.Contains(_problems[i].slug);
             bool unlocked = IsUnlocked(i);
             b.interactable = unlocked;
-            b.targetGraphic.color = i == _current ? new Color(0.25f, 0.45f, 0.7f) : passed ? new Color(0.2f, 0.55f, 0.35f) : unlocked ? new Color(0.35f, 0.35f, 0.4f) : new Color(0.2f, 0.2f, 0.22f);
+            b.targetGraphic.color = i == _current ? ForestStageCurrent : passed ? ForestStagePassed : unlocked ? ForestStageUnlocked : ForestStageLocked;
             bool boss = i == _problems.Count - 1 && _problems.Count > 1;
             b.GetComponentInChildren<Text>().text = (boss ? "BOSS" : $"{i + 1}") + (passed ? " ✓" : unlocked ? "" : " 🔒");
         }
@@ -580,33 +626,34 @@ public class CodeEditorUI : MonoBehaviour
         _scaler.scaleFactor = 1f;
 
         // ---------- Main panel on the right (every block has a fixed height; overflow scrolls inside the block) ----------
-        var panel = Panel("Panel", canvasGo.transform, new Color(0.11f, 0.12f, 0.14f, 0.96f));
+        var panel = Panel("Panel", canvasGo.transform, ForestPanelBg);
         _root = panel.gameObject;
         var prt = panel.rectTransform;
         prt.anchorMin = new Vector2(0.53f, 0.03f);
         prt.anchorMax = new Vector2(0.985f, 0.97f);
         prt.offsetMin = prt.offsetMax = Vector2.zero;
         var vl = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-        vl.padding = new RectOffset(fontSize * 2 / 3, fontSize * 2 / 3, fontSize / 2, fontSize / 2);
-        vl.spacing = fontSize / 2;
+        vl.padding = new RectOffset(fontSize * 3 / 4, fontSize * 3 / 4, fontSize * 2 / 3, fontSize * 2 / 3);
+        vl.spacing = fontSize * 2 / 3;
         vl.childControlWidth = vl.childControlHeight = true;
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
 
         // Title + countdown
         var header = Row("Header", panel.transform, fontSize * 1.7f);
-        _title = Label("Title", header, _ui, fontSize + 4, Color.white, TextAnchor.MiddleLeft);
+        _title = Label("Title", header, _ui, fontSize + 4, ForestTextCream, TextAnchor.MiddleLeft);
+        _title.fontStyle = FontStyle.Bold;
         _title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-        _timerLabel = Label("Timer", header, _mono, fontSize + 2, Color.white, TextAnchor.MiddleRight);
+        _timerLabel = Label("Timer", header, _mono, fontSize + 2, ForestTextCream, TextAnchor.MiddleRight);
         _timerLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 9;
 
         // Stage bar
         _stageBar = Row("Stages", panel.transform, fontSize * 2);
 
         // Problem description (scrollable)
-        var descBox = Panel("Problem", panel.transform, new Color(0.16f, 0.17f, 0.2f));
+        var descBox = Panel("Problem", panel.transform, ForestBoxBg);
         Fix(descBox.gameObject, fontSize * 9f);
-        _problemText = ScrollableText(descBox, _ui, fontSize - 1, new Color(0.9f, 0.9f, 0.9f));
+        _problemText = ScrollableText(descBox, _ui, fontSize - 1, ForestTextCream);
 
         // Code box (fixed at 18 lines, scrolls vertically)
         _code = MakeInputField("Code", panel.transform, "# write Python here");
@@ -615,7 +662,7 @@ public class CodeEditorUI : MonoBehaviour
         Fix(_code.gameObject, fontSize * 18);
 
         // The player's own input (stdin)
-        var inLabel = Label("InputLabel", panel.transform, _ui, fontSize - 3, new Color(0.7f, 0.7f, 0.7f), TextAnchor.LowerLeft);
+        var inLabel = Label("InputLabel", panel.transform, _ui, fontSize - 3, ForestTextMuted, TextAnchor.LowerLeft);
         inLabel.text = "Input (stdin for Run)";
         Fix(inLabel.gameObject, fontSize);
         _stdin = MakeInputField("Stdin", panel.transform, "lines your program reads with input()");
@@ -624,35 +671,41 @@ public class CodeEditorUI : MonoBehaviour
         Fix(_stdin.gameObject, fontSize * 4);
 
         // Output
-        var outLabel = Label("OutputLabel", panel.transform, _ui, fontSize - 3, new Color(0.7f, 0.7f, 0.7f), TextAnchor.LowerLeft);
+        var outLabel = Label("OutputLabel", panel.transform, _ui, fontSize - 3, ForestTextMuted, TextAnchor.LowerLeft);
         outLabel.text = "Output";
         Fix(outLabel.gameObject, fontSize);
-        var outBox = Panel("Output", panel.transform, new Color(0.05f, 0.05f, 0.06f));
+        var outBox = Panel("Output", panel.transform, ForestOutputBg);
         Fix(outBox.gameObject, fontSize * 8);
-        _output = ScrollableText(outBox, _mono, fontSize - 1, new Color(0.85f, 0.9f, 0.85f));
+        _output = ScrollableText(outBox, _mono, fontSize - 1, new Color(0.82f, 0.9f, 0.82f));
 
         // Button row (four buttons share the width) + Ref row + status row
         var bar = Row("Bar", panel.transform, fontSize * 2);
-        _runBtn = MakeButton("Run", bar, "Run (Ctrl+Enter)", () => RunCode(false), new Color(0.25f, 0.45f, 0.7f));
-        _submitBtn = MakeButton("Submit", bar, "Submit", () => RunCode(true), new Color(0.2f, 0.55f, 0.35f));
-        MakeButton("PandaHint", bar, "Panda hint", () =>
+        _runBtn = MakeButton("Run", bar, "Run (Ctrl+Enter)", () => RunCode(false), ForestAccentRun);
+        _submitBtn = MakeButton("Submit", bar, "Submit", () => RunCode(true), ForestAccentSubmit);
+        var hintBtn = MakeButton("PandaHint", bar, "Ask Panda for a Hint", () =>
         {
             if (PandaCompanion.Instance != null) PandaCompanion.Instance.OnClicked();
-        }, new Color(0.55f, 0.4f, 0.2f));
-        MakeButton("Close", bar, "Close (Esc)", Close, new Color(0.35f, 0.35f, 0.4f));
+        }, ForestAccentHint);
+        // The hint button gets more width and a bolder label so it reads as a distinct, game-y action rather than another IDE button
+        hintBtn.GetComponent<LayoutElement>().flexibleWidth = 1.4f;
+        var hintLabel = hintBtn.GetComponentInChildren<Text>();
+        hintLabel.fontStyle = FontStyle.Bold;
+        hintLabel.color = new Color(0.16f, 0.1f, 0.04f);
+        MakeButton("Close", bar, "Close (Esc)", Close, ForestAccentClose);
         _refBar = Row("RefBar", panel.transform, fontSize * 1.8f).gameObject;
         var statusRow = Row("StatusRow", panel.transform, fontSize * 1.6f);
-        _status = Label("Status", statusRow, _ui, fontSize - 1, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
+        _status = Label("Status", statusRow, _ui, fontSize - 1, ForestTextMuted, TextAnchor.MiddleLeft);
         _status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
         // Shown only when Python is missing: opens the download page
-        _pyBtn = MakeButton("GetPython", statusRow, "Get Python", () => Application.OpenURL(PythonRunner.DownloadUrl), new Color(0.75f, 0.45f, 0.2f));
+        _pyBtn = MakeButton("GetPython", statusRow, "Get Python", () => Application.OpenURL(PythonRunner.DownloadUrl), ForestAccentHint);
+        _pyBtn.GetComponentInChildren<Text>().color = new Color(0.16f, 0.1f, 0.04f);
         var pyLe = _pyBtn.GetComponent<LayoutElement>();
         pyLe.flexibleWidth = 0;
         pyLe.preferredWidth = fontSize * 8;
         _pyBtn.gameObject.SetActive(false);
 
         // ---------- Continue / New game (overlaid on the main panel) ----------
-        var choice = Panel("Choice", canvasGo.transform, new Color(0.08f, 0.09f, 0.11f, 0.98f));
+        var choice = Panel("Choice", canvasGo.transform, new Color(0.067f, 0.09f, 0.075f, 0.98f));
         _choiceRoot = choice.gameObject;
         var crt = choice.rectTransform;
         crt.anchorMin = new Vector2(0.53f, 0.38f);
@@ -664,14 +717,14 @@ public class CodeEditorUI : MonoBehaviour
         cvl.childControlWidth = cvl.childControlHeight = true;
         cvl.childForceExpandWidth = true;
         cvl.childForceExpandHeight = false;
-        _choiceText = Label("Text", choice.transform, _ui, fontSize + 2, Color.white, TextAnchor.MiddleCenter);
+        _choiceText = Label("Text", choice.transform, _ui, fontSize + 2, ForestTextCream, TextAnchor.MiddleCenter);
         _choiceText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
         var cbar = Row("Bar", choice.transform, fontSize * 2.4f);
-        MakeButton("Continue", cbar, "Continue", ChooseContinue, new Color(0.2f, 0.55f, 0.35f));
-        MakeButton("New", cbar, "New game", ChooseNewGame, new Color(0.6f, 0.3f, 0.3f));
+        MakeButton("Continue", cbar, "Continue", ChooseContinue, ForestAccentSubmit);
+        MakeButton("New", cbar, "New game", ChooseNewGame, new Color(0.55f, 0.28f, 0.24f));
 
         // ---------- Reference code panel on the left ----------
-        var refPanel = Panel("ReferencePanel", canvasGo.transform, new Color(0.1f, 0.1f, 0.13f, 0.96f));
+        var refPanel = Panel("ReferencePanel", canvasGo.transform, new Color(0.075f, 0.1f, 0.082f, 0.96f));
         _refRoot = refPanel.gameObject;
         var rrt = refPanel.rectTransform;
         rrt.anchorMin = new Vector2(0.015f, 0.03f);
@@ -683,15 +736,15 @@ public class CodeEditorUI : MonoBehaviour
         rvl.childControlWidth = rvl.childControlHeight = true;
         rvl.childForceExpandWidth = true;
         rvl.childForceExpandHeight = false;
-        _refTitle = Label("Title", refPanel.transform, _ui, fontSize + 2, Color.white, TextAnchor.MiddleLeft);
+        _refTitle = Label("Title", refPanel.transform, _ui, fontSize + 2, ForestTextCream, TextAnchor.MiddleLeft);
         Fix(_refTitle.gameObject, fontSize * 1.7f);
         _refField = MakeInputField("RefCode", refPanel.transform, "");
         _refField.readOnly = true;
         _refField.gameObject.AddComponent<CodeInputHelper>().autoIndent = false;   // sizes the text to its content and handles wheel scrolling
         _refField.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
         var rbar = Row("Bar", refPanel.transform, fontSize * 2);
-        MakeButton("Insert", rbar, "Insert into editor", InsertReference, new Color(0.25f, 0.45f, 0.7f));
-        MakeButton("Hide", rbar, "Hide", () => _refRoot.SetActive(false), new Color(0.35f, 0.35f, 0.4f));
+        MakeButton("Insert", rbar, "Insert into editor", InsertReference, ForestAccentRun);
+        MakeButton("Hide", rbar, "Hide", () => _refRoot.SetActive(false), ForestAccentClose);
     }
 
     static Image Panel(string name, Transform parent, Color color)
@@ -700,6 +753,8 @@ public class CodeEditorUI : MonoBehaviour
         go.transform.SetParent(parent, false);
         var img = go.GetComponent<Image>();
         img.color = color;
+        img.sprite = RoundedSprite;
+        img.type = Image.Type.Sliced;
         return img;
     }
 
@@ -777,21 +832,21 @@ public class CodeEditorUI : MonoBehaviour
     InputField MakeInputField(string name, Transform parent, string placeholder)
     {
         // Structure: box (Image + InputField + wheel-only ScrollRect) -> Viewport (RectMask2D) -> Text (height computed from the full text by CodeInputHelper) + Placeholder
-        var bg = Panel(name, parent, new Color(0.07f, 0.08f, 0.09f));
+        var bg = Panel(name, parent, ForestInputBg);
         var field = bg.gameObject.AddComponent<InputField>();
         var scroll = bg.gameObject.AddComponent<WheelOnlyScrollRect>();
         var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
         viewport.transform.SetParent(bg.transform, false);
         var vrt = (RectTransform)viewport.transform;
         Stretch(vrt, fontSize / 2f);
-        var text = Label("Text", viewport.transform, _mono, fontSize, new Color(0.92f, 0.93f, 0.9f), TextAnchor.UpperLeft);
+        var text = Label("Text", viewport.transform, _mono, fontSize, ForestTextCream, TextAnchor.UpperLeft);
         text.verticalOverflow = VerticalWrapMode.Overflow;
         var trt = text.rectTransform;
         trt.anchorMin = new Vector2(0f, 1f);
         trt.anchorMax = new Vector2(1f, 1f);
         trt.pivot = new Vector2(0f, 1f);
         trt.offsetMin = trt.offsetMax = Vector2.zero;
-        var ph = Label("Placeholder", viewport.transform, _mono, fontSize, new Color(0.5f, 0.5f, 0.5f), TextAnchor.UpperLeft);
+        var ph = Label("Placeholder", viewport.transform, _mono, fontSize, new Color(0.45f, 0.5f, 0.44f), TextAnchor.UpperLeft);
         ph.text = placeholder;
         Stretch(ph.rectTransform, 0);
         field.textComponent = text;
@@ -800,8 +855,8 @@ public class CodeEditorUI : MonoBehaviour
         field.contentType = InputField.ContentType.Standard;
         field.caretWidth = 2;
         field.customCaretColor = true;
-        field.caretColor = Color.white;
-        field.selectionColor = new Color(0.3f, 0.5f, 0.8f, 0.5f);
+        field.caretColor = ForestTextCream;
+        field.selectionColor = new Color(0.44f, 0.64f, 0.46f, 0.5f);
         field.characterLimit = 0;
         scroll.viewport = vrt;
         scroll.content = trt;
