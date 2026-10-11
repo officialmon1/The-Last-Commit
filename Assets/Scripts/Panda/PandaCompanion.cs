@@ -82,28 +82,28 @@ namespace Panda
         // Small talk while the terminal is closed. Hints and face reactions are for the terminal only.
         static readonly string[] SmallTalk =
         {
-            "I'm BaoBao. I live here, mostly eating bamboo and watching travellers try to leave.",
-            "The broken pillars are the locks. Every one you open loosens the gate a little.",
-            "Take the path at your own pace, but not too slowly. The forest keeps the time.",
-            "I've watched a lot of travellers in here. You look like one of the clever ones.",
-            "Out here I just talk. Step up to a pillar and press E, and I can help with the code.",
-            "Don't mind the glowing bits in the trees. They've always done that.",
-            "Which pillar next? I'd pick whichever one is closest.",
-            "The gate at the far end of the clearing only opens once every lock is undone.",
-            "I'd offer you some bamboo, but you look like you'd rather have the way out.",
-            "A short walk clears the head before a hard problem. That's a panda tip, it's free.",
-            "Everything in here was built by someone who forgot how to leave. Don't be that someone.",
-            "If you hear the trees creak, that's just them talking about you. Mostly nice things.",
+            "Knight Hacks is a strange place to wake up in. Nobody means to come here. Some of us just stayed.",
+            "The four broken pillars are the way home. Restore them all and the portal wakes up.",
+            "The ancient text on the pillars looks like a spell. It isn't. It's a program with pieces missing.",
+            "Thirty-six minutes feels like plenty until you're staring at a hard one. Keep walking.",
+            "Out here I just keep you company. At a pillar, press E, and I'll help with the code.",
+            "I've read Grand Bao Bao's book cover to cover. The hints in it are good. The jokes are not.",
+            "Your face tells me more than you think. When it says you're stuck, I'll offer a hint. Just say yes.",
+            "Which pillar next? Whichever is closest. The order doesn't matter, the clock does.",
+            "Everything in this forest was built by someone who never made it home. Don't be the next one.",
+            "The portal is at the far end of the clearing, asleep for now. Four restored pillars wake it.",
+            "Somewhere on the other side there's a job waiting for you. Let's make sure you're there for it.",
+            "Every traveller who got out of here started the same way: with one pillar.",
         };
         static readonly string[] AfterLevel =
         {
-            "That lock is open! Catch your breath, then find the next pillar.",
-            "Nicely done. One more down, and the forest already feels a little lighter.",
-            "Solved and sealed. Whenever you're ready, the next pillar is waiting.",
-            "Good work back there. On to the next one when you're ready.",
+            "That pillar is standing again! Catch your breath, then find the next one.",
+            "Restored. The portal felt that, I promise. On to the next pillar.",
+            "Clean work. One more piece of this world put back together.",
+            "You solved it. Grand Bao Bao would have liked you. Next pillar whenever you're ready.",
         };
-        const string AllClearedLine = "Every lock is open. The gate at the far end of the clearing is waiting for you.";
-        const string EdgeLine = "Careful, that's the edge of the forest. There's nothing out there but mist. Turn back.";
+        const string AllClearedLine = "Every pillar stands again and the portal is open. Walk through it and go home. It was good travelling with you.";
+        const string EdgeLine = "Careful, that's the edge of Knight Hacks. Past the mist there's nothing at all. Turn back toward the ruins.";
 
         bool _editorWasOpen, _allCleared, _quiet;
         int _passedAtOpen, _lastLine = -1;
@@ -166,6 +166,7 @@ namespace Panda
         void HandleBackendReady()
         {
             _backendFailed = false;
+            if (IntroBriefing.Playing) return;   // Bao Bao is busy telling the story
             if (!CodeEditorUI.IsOpen) { SayIdle(Pick(SmallTalk)); return; }   // out in the forest: small talk, not "stuck?"
             if (!_hinting && (CodeEditorUI.Instance == null || CodeEditorUI.Instance.CurrentHints.Count == 0)) speechBubble.Clear();
         }
@@ -179,7 +180,7 @@ namespace Panda
         /// </summary>
         void Chatter()
         {
-            if (speechBubble == null || _quiet || GameEnd.IsShown) return;
+            if (speechBubble == null || _quiet || GameEnd.IsShown || IntroBriefing.Playing) return;
             if (GameStart.Instance != null && !GameStart.Started) return;   // the bubble is hidden behind the start menu anyway
             bool open = CodeEditorUI.IsOpen;
             var editor = CodeEditorUI.Instance;
@@ -211,6 +212,9 @@ namespace Panda
             }
             if (Time.unscaledTime >= _nextChatter) SayIdle(Pick(SmallTalk));
         }
+
+        /// <summary>The intro briefing hands the bubble back with a first small-talk line.</summary>
+        public void BeginSmallTalk() => SayIdle(Pick(SmallTalk));
 
         void SayIdle(string text)
         {
@@ -425,6 +429,7 @@ namespace Panda
         /// <summary>Called by ClickRouter when the player clicks the panda.</summary>
         public void OnClicked()
         {
+            if (IntroBriefing.Playing) return;
             AskHint();
         }
 

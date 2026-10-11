@@ -119,7 +119,7 @@ public class CodeTerminal : MonoBehaviour
         _inRange = false;
         if (CodeEditorUI.IsOpen || cam == null) return;
         if (GameStart.Instance != null && !GameStart.Started) return;   // still on the start screen
-        if (GameEnd.IsShown) return;
+        if (GameEnd.IsShown || IntroBriefing.Playing) return;
         var ct = cam.transform;
         // a thick ray so precise aiming is not needed
         if (Physics.SphereCast(ct.position, 0.3f, ct.forward, out var hit, interactDistance) && hit.collider.GetComponentInParent<CodeTerminal>() == this)

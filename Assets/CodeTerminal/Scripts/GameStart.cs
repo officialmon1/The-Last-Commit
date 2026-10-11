@@ -23,6 +23,9 @@ public class GameStart : MonoBehaviour
     [Tooltip("Canvases kept hidden until the game starts (e.g. the panda's speech bubble, so it doesn't show over the start menu).")]
     public Canvas[] hideUntilStart = Array.Empty<Canvas>();
 
+    [Tooltip("After Begin, Bao Bao tells the story (IntroBriefing) before the player gets control. Off = straight into the game.")]
+    public bool playIntro = true;
+
     [Header("Start menu backdrop")]
     [Tooltip("Video looped behind the start menu (Resources path, no extension): drawn into the start screen's 'forest-background' layer. Empty or missing -> the sky camera below is used instead.")]
     public string menuVideo = "Videos/forest-background";
@@ -139,6 +142,7 @@ public class GameStart : MonoBehaviour
             UnityEngine.Cursor.visible = false;
         }
         GameStarted?.Invoke();
+        if (playIntro) IntroBriefing.Play();
     }
 
     void OnGUI()

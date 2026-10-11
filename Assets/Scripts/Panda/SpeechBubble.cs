@@ -216,6 +216,14 @@ namespace Panda
             ShowText(IdleText);
         }
 
+        /// <summary>Plain text with two buttons of your own (the intro briefing's Next / Skip).</summary>
+        public void ShowChoice(string text, string primary, Action onPrimary, string secondary, Action onSecondary)
+        {
+            bubbleText.text = text;
+            SetButton(button1, button1Label, primary, onPrimary);
+            SetButton(button2, button2Label, secondary, onSecondary);
+        }
+
         void SetButton(Button button, Text label, string text, Action onClick)
         {
             label.text = text;
