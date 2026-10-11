@@ -18,8 +18,9 @@ namespace Panda
         [Header("Follow")]
         [Tooltip("Who to follow. Empty = the FirstPersonController in the scene.")]
         public Transform followTarget;
-        [Tooltip("Where the panda stands relative to the player: x = right, z = forward. Slightly in front keeps it in view.")]
-        public Vector3 followOffset = new Vector3(-1.1f, 0f, 1.4f);
+        [Tooltip("Where the panda stands relative to the player: x = right, z = forward. Kept fairly far forward " +
+                 "so it stays inside the camera's view instead of drifting out to the side and off screen.")]
+        public Vector3 followOffset = new Vector3(-1.1f, 0f, 2.3f);
         [Tooltip("Only start walking once the panda is this far from its spot (stops it jittering).")]
         public float followSlack = 0.6f;
         public float followSpeed = 4.5f;
@@ -28,6 +29,16 @@ namespace Panda
         [Header("Model")]
         [Tooltip("Rescale the model so it is this tall (metres). 0 = keep the model's own size.")]
         public float targetHeight = 1.1f;
+
+        [Header("Terminal wait spot (pinned to a fixed spot on screen)")]
+        [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit.")]
+        public float editorWaitViewportX = 0.22f;
+        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit.")]
+        public float editorWaitViewportY = 0.15f;
+        [Tooltip("How far in front of the camera (metres) that spot sits. Keep this closer than terminals are " +
+                 "ever stood next to, so the panda is never hidden behind one -- bring it closer (and it'll " +
+                 "happily overlap the terminal) rather than push it back and risk it vanishing behind geometry.")]
+        public float editorWaitDepth = 2.3f;
 
         [Header("Movement")]
         public float patrolDistance = 1.5f;
@@ -125,24 +136,37 @@ namespace Panda
         }
 
         /// <summary>The spot beside the player the panda wants to stand on, dropped onto the ground.</summary>
-        Vector3 FollowSpot() => FollowSpot(followOffset.z);
-
-        /// <summary>
-        /// Same as <see cref="FollowSpot()"/> but with an overridable forward push: when the terminal is open
-        /// the player is standing right up against it, so pushing forward by the usual followOffset.z would land
-        /// the panda inside/behind the terminal (and the ground raycast below would then stand it on the
-        /// terminal's roof instead of the floor). Waiting directly beside the player (forwardOffset = 0) keeps it clear.
-        /// </summary>
-        Vector3 FollowSpot(float forwardOffset)
+        Vector3 FollowSpot()
         {
             Vector3 fwd = followTarget.forward; fwd.y = 0f;
             if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
             fwd.Normalize();
             Vector3 right = Vector3.Cross(Vector3.up, fwd);
-            Vector3 spot = followTarget.position + right * followOffset.x + fwd * forwardOffset;
+            Vector3 spot = followTarget.position + right * followOffset.x + fwd * followOffset.z;
             spot.y = followTarget.position.y + followOffset.y;
+            return GroundSnap(spot);
+        }
 
-            // stand on whatever is below (ignoring the player and the panda itself)
+        /// <summary>
+        /// Where the panda waits while the code editor is open. Projecting a fixed viewport point into world
+        /// space (rather than offsetting from the camera's position along its own axes) is what actually makes
+        /// this appear in the same place on screen every time: a pure position+direction offset still shifts on
+        /// screen with the camera's pitch (looking down at the terminal vs. level), because the projection back
+        /// onto the screen depends on the camera's current rotation, not just where the point sits in the world.
+        /// Viewport coordinates compensate for that by construction. No ground raycast either -- that was
+        /// picking up whatever happened to be nearby (the terminal's own collider, a wall) and is exactly what
+        /// made this drift between different terminals.
+        /// </summary>
+        Vector3 EditorWaitSpot()
+        {
+            var cam = Camera.main;
+            if (cam == null) return FollowSpot();
+            return cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
+        }
+
+        /// <summary>Drops a world point onto whatever's below it (ignoring the player and the panda itself).</summary>
+        Vector3 GroundSnap(Vector3 spot)
+        {
             var hits = Physics.RaycastAll(spot + Vector3.up * 3f, Vector3.down, 10f, ~0, QueryTriggerInteraction.Ignore);
             float best = float.NegativeInfinity;
             foreach (var hit in hits)
@@ -156,17 +180,19 @@ namespace Panda
 
         void Follow()
         {
-            // the player can't move while the terminal is open, so snap straight to the spot
-            // instead of walking over: the panda should already be waiting there, ready for hints.
-            // Stand directly beside the player (no forward push) so it doesn't land inside/behind the terminal.
+            // the player can't move while the terminal is open, so snap straight to its screen-anchored
+            // wait spot instead of walking over: the panda should already be waiting there, ready for hints,
+            // and stay there (every frame, not just once) so it can never drift back under the editor panel.
             if (CodeEditorUI.IsOpen)
             {
-                _groundPos = FollowSpot(0f);
+                _groundPos = EditorWaitSpot();
                 _walking = false;
                 transform.position = _groundPos + Vector3.up * _feetOffset;
-                Vector3 toPlayer = followTarget.position - transform.position; toPlayer.y = 0f;
-                if (toPlayer.sqrMagnitude > 0.0001f)
-                    transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix;
+                var cam = Camera.main;
+                Vector3 toCam = (cam != null ? cam.transform.position : followTarget.position) - transform.position;
+                toCam.y = 0f;
+                if (toCam.sqrMagnitude > 0.0001f)
+                    transform.rotation = Quaternion.LookRotation(toCam, Vector3.up) * ModelUpFix;
                 return;
             }
 

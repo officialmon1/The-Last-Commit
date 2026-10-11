@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Panda;
 
 /// <summary>
 /// A pillar in the world that opens one level of a track. Look at it within interactDistance and press E to open the Python editor on that level.
@@ -85,8 +86,30 @@ public class CodeTerminal : MonoBehaviour
         {
             _inRange = true;
             var kb = Keyboard.current;
-            if (kb != null && kb.eKey.wasPressedThisFrame && CodeEditorUI.Instance != null) CodeEditorUI.Instance.Open(track, level - 1);
+            if (kb != null && kb.eKey.wasPressedThisFrame && CodeEditorUI.Instance != null)
+            {
+                BackAwayIfTooClose(hit.distance, ct);
+                CodeEditorUI.Instance.Open(track, level - 1);
+            }
         }
+    }
+
+    /// <summary>
+    /// Panda waits at a fixed depth in front of the camera once the editor opens (PandaCompanion.editorWaitDepth).
+    /// If the player pressed E while standing closer to this pillar than that, the pillar itself would sit between
+    /// the camera and Panda's spot and hide her behind it. Step the player back before the editor opens -- using
+    /// CharacterController.Move so it respects collisions and can't push them through a wall behind them.
+    /// </summary>
+    void BackAwayIfTooClose(float hitDistance, Transform cam)
+    {
+        float minDistance = (PandaCompanion.Instance != null ? PandaCompanion.Instance.editorWaitDepth : 2.3f) + 0.3f;
+        float shortfall = minDistance - hitDistance;
+        if (shortfall <= 0f) return;
+        var cc = cam.GetComponentInParent<CharacterController>();
+        if (cc == null) return;
+        Vector3 back = -cam.forward; back.y = 0f;
+        if (back.sqrMagnitude < 0.0001f) return;
+        cc.Move(back.normalized * shortfall);
     }
 
     void OnGUI()
