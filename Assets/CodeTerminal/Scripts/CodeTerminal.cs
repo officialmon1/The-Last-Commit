@@ -24,7 +24,7 @@ public class CodeTerminal : MonoBehaviour
     static readonly Color LockedColor = new Color(0.43f, 0.42f, 0.4f);
     static readonly Color FinalColor = new Color(0.9f, 0.65f, 0.22f);
 
-    bool _inRange, _passedShown;
+    bool _inRange, _passedShown, _ruinRestored;
     int _stateShown = -1;
     GUIStyle _style;
     Material _mat;
@@ -103,6 +103,7 @@ public class CodeTerminal : MonoBehaviour
         }
         var editor = CodeEditorUI.Instance;
         _passedShown = editor != null && editor.IsPassed(track, level - 1);
+        if (_passedShown && !_ruinRestored) { _ruinRestored = true; GetComponent<RuinRestorer>()?.Restore(); }   // the solved pillar rises again on the spot
         bool unlocked = !finalProblem || (editor != null && editor.IsUnlocked(track, level - 1));
         int state = !unlocked ? 0 : _passedShown ? 2 : 1;
         if (state != _stateShown)

@@ -10374,6 +10374,7 @@ MonoBehaviour:
   seal: {fileID: 0}
   portalLight: {fileID: 2069670507}
   barrier: {fileID: 1277336414}
+  openModel: {fileID: 919132149155446097, guid: 952bd9a49b2ce4dc4bb58d4d1080bd78, type: 3}
   ruins:
   - {fileID: 1753986183}
   - {fileID: 1531895359}

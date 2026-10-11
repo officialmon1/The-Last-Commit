@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -62,7 +64,7 @@ public class GameEnd : MonoBehaviour
         _submit.interactable = true;
         _status.text = "Enter a name to put this time on the leaderboard.";
         _board.text = "Loading the fastest escapes...";
-        _name.ActivateInputField();
+        StartCoroutine(FocusNameWhenKeysReleased());
         Leaderboard.Fetch(this, r =>
         {
             if (this == null || _submitted) return;
@@ -90,6 +92,19 @@ public class GameEnd : MonoBehaviour
         _scoreSection.SetActive(withScore);
         _panel.sizeDelta = new Vector2(_fontSize * 34f, _fontSize * (withScore ? 27f : 11f));
         _root.SetActive(true);
+    }
+
+    /// <summary>
+    /// The player usually walks into the gate with W held down; a focused field would fill up with w's.
+    /// So the field only takes focus (empty) after a short pause once no key is held any more.
+    /// </summary>
+    IEnumerator FocusNameWhenKeysReleased()
+    {
+        float t0 = Time.unscaledTime;
+        while (Time.unscaledTime - t0 < 0.6f || (Keyboard.current != null && Keyboard.current.anyKey.isPressed)) yield return null;
+        if (!IsShown || _submitted) yield break;
+        _name.text = "";
+        _name.ActivateInputField();
     }
 
     void SubmitScore()

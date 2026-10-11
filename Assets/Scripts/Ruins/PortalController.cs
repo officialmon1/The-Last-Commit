@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Panda;
 
@@ -20,9 +21,10 @@ public class PortalController : MonoBehaviour
     public Renderer seal;
     public Light portalLight;
     [Tooltip("Solid collider that blocks the gateway until the final problem is solved.")] public Collider barrier;
+    [Tooltip("Model of the open gateway (PortalOn_01). When the final problem is solved it replaces the closed model (the PortalOff child), at the same spot.")] public GameObject openModel;
 
     [Header("Repair")]
-    [Tooltip("Broken ruins repaired when the four problems are solved, in this order.")] public RuinRestorer[] ruins;
+    [Tooltip("Broken ruins repaired when the four problems are solved, in this order. Every other RuinRestorer in the scene follows after them.")] public RuinRestorer[] ruins;
     [Tooltip("Seconds between one ruin rebuilding and the next.")] public float ruinStagger = 0.45f;
     public float turnOnDuration = 2.5f;
 
@@ -38,6 +40,7 @@ public class PortalController : MonoBehaviour
     bool _animating, _escaped;
     Bounds _gate;   // the barrier's volume, captured while its collider is still enabled
     Transform _player;
+    GameObject _openInstance;
     static readonly Color DormantColor = new Color(0.12f, 0.1f, 0.09f, 0.18f);
 
     void Start()
@@ -105,13 +108,16 @@ public class PortalController : MonoBehaviour
     {
         _animating = true;
         float delay = 0f;
-        if (ruins != null)
-            foreach (var ruin in ruins)
-            {
-                if (ruin == null) continue;
-                ruin.Restore(delay);
-                delay += ruinStagger;
-            }
+        // the listed ruins first, in their order, then anything else in the scene that is still broken (a ruin added later must not be left behind)
+        var order = new List<RuinRestorer>();
+        if (ruins != null) foreach (var r in ruins) if (r != null && !order.Contains(r)) order.Add(r);
+        foreach (var r in FindObjectsByType<RuinRestorer>(FindObjectsSortMode.None)) if (!order.Contains(r)) order.Add(r);
+        foreach (var ruin in order)
+        {
+            if (ruin.Restored) continue;   // the solved pillars rebuilt themselves already
+            ruin.Restore(delay);
+            delay += ruinStagger;
+        }
         if (PandaCompanion.Instance != null)
             PandaCompanion.Instance.ShowCelebration("Look! The ruins are whole again and the portal is waking up. The final problem waits at the portal.");
 
@@ -132,6 +138,7 @@ public class PortalController : MonoBehaviour
         if (Current == State.Dormant) TurnOn();   // e.g. a saved run that was already finished
         Current = State.Open;
         if (barrier != null) barrier.enabled = false;
+        ShowOpenModel();
         StartCoroutine(OpenRoutine());
         if (PandaCompanion.Instance != null)
             PandaCompanion.Instance.ShowCelebration("You did it! The portal is open. Walk through and escape!");
@@ -153,6 +160,22 @@ public class PortalController : MonoBehaviour
             yield return null;
         }
         _animating = false;
+    }
+
+    /// <summary>Swaps the closed gateway model (the PortalOff child) for <see cref="openModel"/> at the same spot.</summary>
+    void ShowOpenModel()
+    {
+        if (openModel == null || _openInstance != null) return;
+        Transform closed = null;
+        foreach (var t in GetComponentsInChildren<Transform>(true))
+            if (t != transform && t.name.StartsWith("PortalOff")) { closed = t; break; }
+        _openInstance = Instantiate(openModel, closed != null ? closed.parent : transform);
+        _openInstance.name = openModel.name;
+        if (closed == null) return;
+        _openInstance.transform.localPosition = closed.localPosition;
+        _openInstance.transform.localRotation = closed.localRotation;
+        _openInstance.transform.localScale = closed.localScale;
+        closed.gameObject.SetActive(false);
     }
 
     /// <summary>0 = dormant (dark seal, light off), 1 = fully awake amber.</summary>
