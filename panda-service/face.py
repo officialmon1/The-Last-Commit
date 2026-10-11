@@ -18,7 +18,8 @@ HAND_MODEL = "models/hand_landmarker.task"
 GAIN = 2.0                 # raise if "concerned" is hard to trigger
 CONCERN_T = 0.12           # smoothed concern needed
 CONCERN_HOLD_S = 1.0       # seconds it must stay above the threshold
-SMILE_T = 0.30             # smoothed smile above baseline
+SMILE_GAIN = 2.0           # same amplification concern gets, so happy isn't disproportionately hard to trigger
+SMILE_T = 0.18             # smoothed smile above baseline (post-gain, comparable to CONCERN_T's bar)
 HAND_POINTS = 6            # of 21 points a hand needs inside the head zone to count
 HANDS_HOLD_TWO_S = 1.0     # both hands on head
 HANDS_HOLD_ONE_S = 2.5     # one hand on head (could just be scratching)
@@ -218,7 +219,8 @@ class FaceTracker:
                 c = min(1.0, GAIN * max(WEIGHTS[k] * deltas[k] for k in WEIGHTS))
                 a = 0.3   # smoothing: higher = faster but twitchier
                 self._concern = (1 - a) * self._concern + a * c
-                self._smile = (1 - a) * self._smile + a * deltas["smile"]
+                smile_signal = min(1.0, SMILE_GAIN * deltas["smile"])
+                self._smile = (1 - a) * self._smile + a * smile_signal
             else:                                      # face not visible: let values fade
                 self._concern *= 0.9
                 self._smile *= 0.9
