@@ -201,10 +201,9 @@ namespace Panda
             }
             if (_hasGround && edgeMargin > 0f && followTarget != null)
             {
-                var safe = _ground;
-                safe.Expand(-edgeMargin * 2f);   // the ground minus the margin on every side
-                Vector3 p = followTarget.position; p.y = safe.center.y;
-                if (!safe.Contains(p))
+                // near the edge = within edgeMargin of the ground's x/z extents (its y extent is only the hills, so a shrunken Bounds.Contains is no use)
+                Vector3 p = followTarget.position - _ground.center;
+                if (Mathf.Abs(p.x) > _ground.extents.x - edgeMargin || Mathf.Abs(p.z) > _ground.extents.z - edgeMargin)
                 {
                     if (Time.unscaledTime >= _edgeWarnedUntil) { SayIdle(EdgeLine); _edgeWarnedUntil = Time.unscaledTime + 12f; }
                     return;
