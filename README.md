@@ -29,7 +29,10 @@
 ## How It Works
 
 The `ling-zara` scene keeps the `lingtong` first-person code-terminal flow and adds Zara's Panda companion.
-Walk with WASD, look at the terminal and press E. Run Python with Ctrl+Enter, Submit to unlock the next stage,
+Press Enter to reveal the pillars, then walk with WASD, look at a pillar and press E.
+Complete the four nearby problems in any order. The larger central pillar holds the final Dijkstra problem
+and stays locked until all four prerequisite problems have passed Submit. Its label shows the current progress.
+Run Python with Ctrl+Enter, Submit with Ctrl+Shift+Enter,
 and use **Panda hint** for increasingly specific hints. The assistant receives the active problem, your code,
 latest run result, earlier hints and remaining time. Real submissions drive its failure and celebration events.
 The local saves, Boss progression, countdown and flower death/revive sequence are retained.
@@ -58,7 +61,7 @@ The checked-in MediaPipe models are in `panda-service/models`.
 Run backend checks with `panda-service/.venv/Scripts/python.exe -m unittest discover -s panda-service -p 'test_*.py'`.
 For the Unity integration check, enter a fresh Play session in `SampleScene` and, before opening a terminal, choose
 **Tools > Panda > Check integration (Play mode)**. It uses a temporary save and checks real Python Run/Submit,
-failure events, the hint button, celebration, stage unlocks, context and JSON payloads.
+failure events, the hint button, celebration, all prerequisite combinations, saved progress, central pillar layout, context and JSON payloads.
 
 ## Tech Stack
 

@@ -28,7 +28,8 @@ public class Problem
 /// The Python editor panel on the right side of the screen (plain uGUI, built at runtime, no prefabs).
 ///
 /// A "track" is the list of problems in Resources/Tracks/&lt;track&gt;.json ordered by stage. Every pillar (CodeTerminal) in the world opens one
-/// level of a track; levels are independent and can be played in any order. Sub-levels come with I/O written, the player fills in the TODOs;
+/// level of a track; the prerequisite levels can be played in any order, and all must be passed before opening the final Boss.
+/// Sub-levels come with I/O written, the player fills in the TODOs;
 /// the Boss is written from scratch, with Ref buttons that show the player's own accepted solutions to the other levels (view / insert into the editor).
 ///
 /// Saves are local only: Application.persistentDataPath/save_&lt;track&gt;.json
@@ -137,6 +138,17 @@ public class CodeEditorUI : MonoBehaviour
     bool AllPassed => _problems.Count > 0 && _problems.TrueForAll(p => _passed.Contains(p.slug));
     /// <summary>Whether level <paramref name="stage"/> (0-based) of a track is accepted (false until that track has been opened once).</summary>
     public bool IsPassed(string track, int stage) => _runStarted && track == _track && stage >= 0 && stage < _problems.Count && _passed.Contains(_problems[stage].slug);
+
+    public int PrerequisitesPassed(string track)
+    {
+        int passed = 0;
+        if (_runStarted && track == _track)
+            for (int i = 0; i < _problems.Count - 1; i++) if (_passed.Contains(_problems[i].slug)) passed++;
+        return passed;
+    }
+
+    public bool IsUnlocked(string track, int stage) => _runStarted && track == _track && stage >= 0 && stage < _problems.Count
+        && (stage < _problems.Count - 1 || PrerequisitesPassed(track) == _problems.Count - 1);
 
     public const int MaxHints = 3;
     static readonly List<string> NoHints = new List<string>();
@@ -298,6 +310,7 @@ public class CodeEditorUI : MonoBehaviour
     void SelectStage(int i)
     {
         if (_running || i < 0 || i >= _problems.Count) return;
+        if (!IsUnlocked(_track, i)) { Close(); return; }
         if (_pendingSave == null) _choiceRoot.SetActive(false);   // switching level dismisses an "Accepted" overlay
         if (_shownSlug != null) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
         _current = i;
@@ -547,7 +560,7 @@ public class CodeEditorUI : MonoBehaviour
 
     // ------------------------------------------------------------------ Run
 
-    /// <summary>submit = false: run with the player's own Input and just show the output. submit = true: run with the hidden input, judge, and unlock the next stage.</summary>
+    /// <summary>submit = false: run with the player's own Input. submit = true: judge the hidden input and record progress toward the final Boss.</summary>
     async void RunCode(bool submit)
     {
         if (_running || _problem == null || (submit && TimeUp)) return;

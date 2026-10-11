@@ -110,6 +110,8 @@ namespace PandaEditor
                 Set(editor, "_problems", problems);
                 Call(editor, "RebuildRefBar");
                 Call(editor, "StartFresh");
+                editor.Open(track, 4);
+                Require(!CodeEditorUI.IsOpen, "The final problem opened before the four prerequisites were passed.");
                 editor.Open(track);
                 Require(player.inputLocked && editor.CurrentProblemText.Contains("Priority Queue"), "Terminal flow/context failed.");
                 var code = Field<InputField>(editor, "_code");
@@ -138,7 +140,17 @@ namespace PandaEditor
                 var restored = JsonUtility.FromJson<HintRequest>(JsonUtility.ToJson(payload));
                 Require(restored.problem == payload.problem && restored.minutes_left == 3.5f
                     && restored.previous_hints[0] == payload.previous_hints[0], "Hint JSON payload failed.");
-                return "PANDA_INTEGRATION_CHECK_PASSED: Python Run/Submit, failures, hints, celebration, level switch and context.";
+                CheckFinalGate(editor, track);
+                GameStart.Instance?.StartGame();
+                var pillars = UnityEngine.Object.FindObjectsByType<CodeTerminal>();
+                var final = pillars.Single(p => p.level == 5);
+                var nearby = pillars.Where(p => p.level != 5).ToArray();
+                Require(nearby.Length == 4, "The scene needs four prerequisite pillars.");
+                var centre = nearby.Aggregate(Vector3.zero, (sum, p) => sum + p.transform.position) / nearby.Length;
+                Require(Vector3.Distance(final.transform.position, centre) < 0.01f, "The final pillar is not in the centre.");
+                Require(final.transform.Find("Pillar").localScale.y > nearby.Max(p => p.transform.Find("Pillar").localScale.y) * 1.5f,
+                    "The final pillar must be visibly larger.");
+                return "PANDA_INTEGRATION_CHECK_PASSED: Python, Panda, all 16 prerequisite combinations, save restore and central final pillar.";
             }
             finally
             {
@@ -147,6 +159,38 @@ namespace PandaEditor
                 editor.Close();
                 if (File.Exists(savePath)) File.Delete(savePath);
             }
+        }
+
+        static void CheckFinalGate(CodeEditorUI editor, string track)
+        {
+            var problems = Field<List<Problem>>(editor, "_problems");
+            var passed = Field<HashSet<string>>(editor, "_passed");
+            editor.Close();
+            // Every possible subset of the four prerequisites: progress is independent of completion order.
+            for (int mask = 0; mask < 16; mask++)
+            {
+                passed.Clear();
+                for (int i = 0; i < 4; i++) if ((mask & (1 << i)) != 0) passed.Add(problems[i].slug);
+                foreach (int i in new[] { 3, 1, 0, 2 })
+                {
+                    editor.Open(track, i);
+                    Require(CodeEditorUI.IsOpen && Field<int>(editor, "_current") == i, "A prerequisite was locked by order.");
+                    editor.Close();
+                }
+                editor.Open(track, 4);
+                Require(CodeEditorUI.IsOpen == (mask == 15), "Final gate failed for prerequisite mask " + mask);
+                editor.Close();
+                Call(editor, "SelectStage", 4);
+                Require((Field<int>(editor, "_current") == 4) == (mask == 15), "Direct selection bypassed the final gate.");
+            }
+            var save = typeof(CodeEditorUI).GetMethod("LoadSave", Private).Invoke(editor, null);
+            Call(editor, "StartFresh");
+            editor.Open(track, 4);
+            Require(!CodeEditorUI.IsOpen, "New game kept the final problem unlocked.");
+            Call(editor, "ApplySave", save);
+            editor.Open(track, 4);
+            Require(CodeEditorUI.IsOpen, "Restoring prerequisite progress did not unlock the final problem.");
+            editor.Close();
         }
     }
 }
