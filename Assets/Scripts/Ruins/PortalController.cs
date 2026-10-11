@@ -26,6 +26,7 @@ public class PortalController : MonoBehaviour
     [Header("Repair")]
     [Tooltip("Broken ruins repaired when the four problems are solved, in this order. Every other RuinRestorer in the scene follows after them.")] public RuinRestorer[] ruins;
     [Tooltip("Seconds between one ruin rebuilding and the next.")] public float ruinStagger = 0.45f;
+    [Tooltip("Every solved problem also brings back a share of the sanctuary's rising ruins (those with a restored model, not on a problem pillar): this many seconds after the pillar itself.")] public float sanctuaryDelay = 1.2f;
     public float turnOnDuration = 2.5f;
 
     [Header("Escape")]
@@ -41,6 +42,7 @@ public class PortalController : MonoBehaviour
     Bounds _gate;   // the barrier's volume, captured while its collider is still enabled
     Transform _player;
     GameObject _openInstance;
+    int _lastSolved = -1;
     static readonly Color DormantColor = new Color(0.12f, 0.1f, 0.09f, 0.18f);
 
     void Start()
@@ -65,6 +67,11 @@ public class PortalController : MonoBehaviour
         var editor = CodeEditorUI.Instance;
         if (editor == null) return;
         int final = finalLevel - 1;
+        if (Current == State.Dormant)
+        {
+            int solved = editor.PrerequisitesPassed(track);
+            if (solved != _lastSolved) { _lastSolved = solved; RestoreSanctuaryShare(solved, final); }
+        }
         if (Current == State.Dormant && editor.IsUnlocked(track, final)) TurnOn();
         if (Current != State.Open && editor.IsPassed(track, final)) Open();
 
@@ -108,13 +115,9 @@ public class PortalController : MonoBehaviour
     {
         _animating = true;
         float delay = 0f;
-        // the listed ruins first, in their order, then anything else in the scene that is still broken (a ruin added later must not be left behind)
-        var order = new List<RuinRestorer>();
-        if (ruins != null) foreach (var r in ruins) if (r != null && !order.Contains(r)) order.Add(r);
-        foreach (var r in FindObjectsByType<RuinRestorer>(FindObjectsSortMode.None)) if (!order.Contains(r)) order.Add(r);
-        foreach (var ruin in order)
+        foreach (var ruin in Ordered())
         {
-            if (ruin.Restored) continue;   // the solved pillars rebuilt themselves already
+            if (ruin.Restored) continue;   // the solved pillars and their share of the sanctuary rebuilt themselves already
             ruin.Restore(delay);
             delay += ruinStagger;
         }
@@ -129,6 +132,35 @@ public class PortalController : MonoBehaviour
         }
         SetGlow(1f);
         _animating = false;
+    }
+
+    /// <summary>The listed ruins first, in their order, then every other RuinRestorer in the scene (a ruin added later must not be left behind).</summary>
+    List<RuinRestorer> Ordered()
+    {
+        var order = new List<RuinRestorer>();
+        if (ruins != null) foreach (var r in ruins) if (r != null && !order.Contains(r)) order.Add(r);
+        foreach (var r in FindObjectsByType<RuinRestorer>(FindObjectsSortMode.None)) if (!order.Contains(r)) order.Add(r);
+        return order;
+    }
+
+    /// <summary>
+    /// Each solved problem brings back its share of the sanctuary's rising ruins (with four problems and four such ruins: one each),
+    /// a moment after the solved pillar itself has risen. The tilted columns that only straighten wait for the portal to wake.
+    /// </summary>
+    void RestoreSanctuaryShare(int solved, int problems)
+    {
+        if (solved <= 0) return;
+        var rising = new List<RuinRestorer>();
+        foreach (var r in Ordered())
+            if (r.restoredModel != null && r.GetComponent<CodeTerminal>() == null) rising.Add(r);
+        int want = Mathf.Min(rising.Count, Mathf.CeilToInt(solved * rising.Count / (float)Mathf.Max(1, problems)));
+        float delay = sanctuaryDelay;
+        for (int i = 0; i < want; i++)
+        {
+            if (rising[i].Restored) continue;
+            rising[i].Restore(delay);
+            delay += ruinStagger;
+        }
     }
 
     /// <summary>Opens the gateway: the seal fades away and the barrier no longer blocks. Called when the final problem is solved.</summary>
@@ -172,9 +204,18 @@ public class PortalController : MonoBehaviour
         _openInstance = Instantiate(openModel, closed != null ? closed.parent : transform);
         _openInstance.name = openModel.name;
         if (closed == null) return;
+        var closedBounds = RuinRestorer.WorldBounds(closed.gameObject);
         _openInstance.transform.localPosition = closed.localPosition;
         _openInstance.transform.localRotation = closed.localRotation;
         _openInstance.transform.localScale = closed.localScale;
+        var openBounds = RuinRestorer.WorldBounds(_openInstance);
+        if (openBounds.size.y > 0.001f && closedBounds.size.y > 0.001f)
+        {
+            // the two fbx files are not exported at the same scale: make the open gateway exactly as tall as the closed one, standing on the same spot
+            _openInstance.transform.localScale *= closedBounds.size.y / openBounds.size.y;
+            openBounds = RuinRestorer.WorldBounds(_openInstance);
+            _openInstance.transform.position += new Vector3(closedBounds.center.x - openBounds.center.x, closedBounds.min.y - openBounds.min.y, closedBounds.center.z - openBounds.center.z);
+        }
         closed.gameObject.SetActive(false);
     }
 

@@ -98,7 +98,7 @@ public class RuinRestorer : MonoBehaviour
         box.size = b.size;
     }
 
-    static Bounds WorldBounds(GameObject go)
+    public static Bounds WorldBounds(GameObject go)
     {
         var rs = go.GetComponentsInChildren<Renderer>();
         if (rs.Length == 0) return new Bounds(go.transform.position, Vector3.zero);

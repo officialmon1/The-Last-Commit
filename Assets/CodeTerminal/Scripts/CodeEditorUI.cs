@@ -54,6 +54,8 @@ public class CodeEditorUI : MonoBehaviour
     public static event Action<string> TrackCompleted;
     /// <summary>Fired once when the track timer runs out (argument = track). The petal death sequence listens to this.</summary>
     public static event Action<string> TrackTimeUp;
+    /// <summary>True while the pause menu is up: the track clock stops.</summary>
+    public static bool Paused;
 
     [Tooltip("Total time for the whole track (seconds). Starts the first time the terminal is opened, keeps running while the game runs, pauses when the game quits, stored in the local save")]
     public int trackTimeLimitSeconds = 36 * 60;
@@ -481,7 +483,7 @@ public class CodeEditorUI : MonoBehaviour
     // Runs while the game runs, even with the panel closed; fires TrackTimeUp exactly once
     void TickRun()
     {
-        if (!_runStarted || _runCompleted || _pendingSave != null) return;   // paused only while the Continue / New game choice is pending
+        if (!_runStarted || _runCompleted || _pendingSave != null || Paused) return;   // paused while the Continue / New game choice is pending or the pause menu is up
         if (TimeUp)
         {
             if (_timeUpFired) return;

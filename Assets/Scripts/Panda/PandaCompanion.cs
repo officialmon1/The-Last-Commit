@@ -180,7 +180,7 @@ namespace Panda
         /// </summary>
         void Chatter()
         {
-            if (speechBubble == null || _quiet || GameEnd.IsShown || IntroBriefing.Playing) return;
+            if (speechBubble == null || _quiet || GameEnd.IsShown || GameEnd.IsPaused || IntroBriefing.Playing) return;
             if (GameStart.Instance != null && !GameStart.Started) return;   // the bubble is hidden behind the start menu anyway
             bool open = CodeEditorUI.IsOpen;
             var editor = CodeEditorUI.Instance;

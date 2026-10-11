@@ -142,6 +142,7 @@ public class GameStart : MonoBehaviour
             UnityEngine.Cursor.visible = false;
         }
         GameStarted?.Invoke();
+        GameEnd.Ensure();   // from now on Esc opens the pause menu (Resume / Restart / Quit)
         if (playIntro) IntroBriefing.Play();
     }
 

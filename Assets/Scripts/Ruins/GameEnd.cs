@@ -14,13 +14,16 @@ using Panda;
 /// Shows the clear time, lets the player put a name on the online leaderboard (<see cref="Leaderboard"/>),
 /// and offers Play again (fresh save, scene reloads) or Quit. Built at runtime like the code editor; no prefabs.
 /// <see cref="ShowDeath"/> reuses it as the game-over screen when the clock runs out: no leaderboard, just Start over / Quit.
+/// It also owns the pause menu: Esc while playing (no terminal, intro or end screen up) stops the clock and the world and offers Resume / Restart / Quit.
 /// </summary>
 public class GameEnd : MonoBehaviour
 {
     public static GameEnd Instance { get; private set; }
     public static bool IsShown => Instance != null && Instance._root != null && Instance._root.activeSelf;
+    public static bool IsPaused { get; private set; }
 
-    GameObject _root, _scoreSection;
+    GameObject _root, _scoreSection, _pauseRoot;
+    bool _editorWasOpen;
     RectTransform _panel;
     Text _title, _time, _status, _board, _againLabel;
     InputField _name;
@@ -82,6 +85,7 @@ public class GameEnd : MonoBehaviour
 
     void Open(bool withScore, string title, string again)
     {
+        if (IsPaused) SetPaused(false);
         if (CodeEditorUI.IsOpen) CodeEditorUI.Instance.Close();
         var fpc = FindAnyObjectByType<FirstPersonController>();
         if (fpc != null) fpc.SetInputLocked(true);
@@ -165,6 +169,37 @@ public class GameEnd : MonoBehaviour
 #endif
     }
 
+    // ------------------------------------------------------------------ pause menu
+
+    void Update()
+    {
+        bool editorOpen = CodeEditorUI.IsOpen;
+        bool wasOpen = _editorWasOpen;
+        _editorWasOpen = editorOpen;
+        // Esc belongs to the terminal and the intro while they are up, and the press that just closed the terminal must not pause
+        if (editorOpen || wasOpen || IsShown || IntroBriefing.Playing) return;
+        if (GameStart.Instance != null && !GameStart.Started) return;
+        var kb = Keyboard.current;
+        if (kb != null && kb.escapeKey.wasPressedThisFrame) SetPaused(!IsPaused);
+    }
+
+    /// <summary>Pause = the world and the track clock stop, the cursor is free for the menu. Resume puts everything back.</summary>
+    public void SetPaused(bool paused)
+    {
+        if (IsPaused == paused) return;
+        IsPaused = paused;
+        _pauseRoot.SetActive(paused);
+        Time.timeScale = paused ? 0f : 1f;
+        CodeEditorUI.Paused = paused;
+        var fpc = FindAnyObjectByType<FirstPersonController>();
+        if (fpc != null) fpc.SetInputLocked(paused);
+    }
+
+    void OnDestroy()
+    {
+        if (IsPaused) { IsPaused = false; Time.timeScale = 1f; CodeEditorUI.Paused = false; }   // a scene reload while paused must not leave the world frozen
+    }
+
     // ------------------------------------------------------------------ UI
 
     void Build()
@@ -246,6 +281,35 @@ public class GameEnd : MonoBehaviour
         var buttons = Row("Buttons", panel.transform, _fontSize * 2.4f);
         _againLabel = Button("Again", buttons, "Play again", PlayAgain, ForestTheme.AccentGreen).GetComponentInChildren<Text>();
         Button("Quit", buttons, "Quit", Quit, ForestTheme.AccentMuted);
+
+        // the pause menu: its own dim + a small panel, hidden until Esc
+        var pauseDim = Image("PauseDim", canvasGo.transform, new Color(0.03f, 0.05f, 0.04f, 0.75f), false);
+        _pauseRoot = pauseDim.gameObject;
+        Stretch(pauseDim.rectTransform, 0f);
+        var pausePanel = Image("PausePanel", pauseDim.transform, ForestTheme.PanelBg, true);
+        var ppt = pausePanel.rectTransform;
+        ppt.anchorMin = ppt.anchorMax = new Vector2(0.5f, 0.5f);
+        ppt.sizeDelta = new Vector2(_fontSize * 26f, _fontSize * 10.5f);
+        var pvl = pausePanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        pvl.padding = new RectOffset(_fontSize * 3 / 2, _fontSize * 3 / 2, _fontSize, _fontSize);
+        pvl.spacing = _fontSize / 2;
+        pvl.childControlWidth = pvl.childControlHeight = true;
+        pvl.childForceExpandWidth = true;
+        pvl.childForceExpandHeight = false;
+        var pauseBanner = Image("Banner", pausePanel.transform, ForestTheme.Amber, true);
+        Fix(pauseBanner.gameObject, _fontSize * 2.2f);
+        var pauseTitle = Label("Title", pauseBanner.transform, _ui, _fontSize + 4, new Color(0.16f, 0.1f, 0.04f), TextAnchor.MiddleCenter);
+        pauseTitle.fontStyle = FontStyle.Bold;
+        pauseTitle.text = "PAUSED";
+        Stretch(pauseTitle.rectTransform, 4f);
+        var pauseNote = Label("Note", pausePanel.transform, _ui, _fontSize - 2, ForestTheme.TextMuted, TextAnchor.MiddleCenter);
+        pauseNote.text = "The clock is stopped. Restart wipes this run and goes back to the start.";
+        Fix(pauseNote.gameObject, _fontSize * 1.8f);
+        var pauseButtons = Row("Buttons", pausePanel.transform, _fontSize * 2.4f);
+        Button("Resume", pauseButtons, "Resume", () => SetPaused(false), ForestTheme.AccentGreen);
+        Button("Restart", pauseButtons, "Restart", PlayAgain, ForestTheme.Amber);
+        Button("PauseQuit", pauseButtons, "Quit", Quit, ForestTheme.AccentMuted);
+        _pauseRoot.SetActive(false);
     }
 
     static Image Image(string name, Transform parent, Color color, bool rounded)

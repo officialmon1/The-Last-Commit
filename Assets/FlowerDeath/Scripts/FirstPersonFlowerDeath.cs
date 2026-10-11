@@ -35,8 +35,9 @@ public class FirstPersonFlowerDeath : MonoBehaviour
     Quaternion _baseRot;
 
     // Hand poses (relative to the camera). Hand local space: fingers along +Y, palm facing -Z (towards the face when raised).
-    static readonly Vector3 RestPos = new Vector3(0f, -0.2f, 0.38f);
-    static readonly Quaternion RestRot = Quaternion.Euler(55f, 0f, 0f);      // fingers point forward-down, only peeking in at the bottom of the screen
+    static readonly Vector3 RestPos = new Vector3(0f, -0.21f, 0.37f);
+    // relaxed first-person pose: backs of the hands up, fingers pointing forward and a little down (local +Y = fingers, +Z = back of the hand)
+    static readonly Quaternion RestRot = Quaternion.LookRotation(new Vector3(0f, 0.94f, 0.34f), new Vector3(0f, -0.34f, 0.94f));
     static readonly Vector3 RaisedPos = new Vector3(0f, -0.24f, 0.44f);
     static readonly Quaternion RaisedRot = Quaternion.Euler(-14f, 0f, 0f);   // palms facing the face, fingertips leaning back slightly
 
@@ -272,7 +273,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         root.SetParent(cam, false);
         foreach (float side in new[] { -1f, 1f })
         {
-            float inner = -side;   // +x for the left hand, -x for the right: where the thumb and the index finger are
+            float radial = side;   // the thumb's side of the hand: the inner side at rest (backs up), the outer side once the palms are turned to the face
             var hand = new GameObject(side < 0 ? "LeftHand" : "RightHand").transform;
             hand.SetParent(root, false);
             hand.localPosition = new Vector3(side * 0.15f, 0f, 0f);
@@ -281,25 +282,25 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             // palm: a cupped slab, a dome on the back, the thumb muscle, the heel on the little-finger side
             Prim(PrimitiveType.Sphere, skin, new Vector3(0f, 0.004f, 0.003f), new Vector3(0.084f, 0.1f, 0.03f), hand);
             Prim(PrimitiveType.Sphere, skin, new Vector3(0f, 0.012f, 0.012f), new Vector3(0.078f, 0.086f, 0.022f), hand);
-            Prim(PrimitiveType.Sphere, pad, new Vector3(inner * 0.027f, -0.018f, -0.009f), new Vector3(0.042f, 0.056f, 0.03f), hand);   // thenar pad
-            Prim(PrimitiveType.Sphere, pad, new Vector3(inner * -0.028f, -0.02f, -0.006f), new Vector3(0.03f, 0.056f, 0.026f), hand);   // hypothenar pad
+            Prim(PrimitiveType.Sphere, pad, new Vector3(radial * 0.027f, -0.018f, -0.009f), new Vector3(0.042f, 0.056f, 0.03f), hand);   // thenar pad
+            Prim(PrimitiveType.Sphere, pad, new Vector3(radial * -0.028f, -0.02f, -0.006f), new Vector3(0.03f, 0.056f, 0.026f), hand);   // hypothenar pad
             Prim(PrimitiveType.Sphere, skin, new Vector3(0f, -0.036f, 0f), new Vector3(0.074f, 0.04f, 0.03f), hand);                   // heel
 
             // four fingers (index .. little): real proportions, a relaxed curl, a knuckle on the back of each root
-            float[] baseX = { 0.031f, 0.0105f, -0.0095f, -0.029f };   // measured towards the inner side
+            float[] baseX = { 0.031f, 0.0105f, -0.0095f, -0.029f };   // measured towards the thumb's side
             float[] len = { 0.072f, 0.081f, 0.075f, 0.058f };
             float[] radius = { 0.0088f, 0.009f, 0.0085f, 0.0074f };
             float[] spread = { 8f, 2.5f, -3f, -9f };                   // degrees away from the middle finger, positive = outward
             float[] curl = { 13f, 16f, 20f, 26f };
             for (int f = 0; f < 4; f++)
             {
-                float x = inner * baseX[f];
-                Finger(hand, new Vector3(x, 0.046f, 0f), Quaternion.Euler(0f, 0f, side * spread[f]), len[f], radius[f], curl[f], skin, pad, nail, 3);
+                float x = radial * baseX[f];
+                Finger(hand, new Vector3(x, 0.046f, 0f), Quaternion.Euler(0f, 0f, -radial * spread[f]), len[f], radius[f], curl[f], skin, pad, nail, 3);
                 Prim(PrimitiveType.Sphere, pad, new Vector3(x, 0.046f, 0.01f), new Vector3(0.021f, 0.019f, 0.018f), hand);   // knuckle
             }
 
-            // thumb: from the inner side of the palm, pointing inward and forward, opposing towards the palm
-            Finger(hand, new Vector3(inner * 0.04f, -0.012f, -0.006f), Quaternion.Euler(-28f, 0f, side * 62f), 0.062f, 0.0115f, 18f, skin, pad, nail, 2);
+            // thumb: from the thumb's side of the palm, pointing sideways and forward, drooping towards the palm (downwards at rest)
+            Finger(hand, new Vector3(radial * 0.04f, -0.012f, -0.006f), Quaternion.Euler(-36f, 0f, -radial * 62f), 0.062f, 0.0115f, 18f, skin, pad, nail, 2);
 
             // wrist, cuff, forearm
             Prim(PrimitiveType.Capsule, skin, new Vector3(0f, -0.085f, 0.003f), new Vector3(0.064f, 0.032f, 0.038f), hand);
@@ -333,7 +334,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             seg.localRotation = Quaternion.Euler(-curlDeg * (i == 0 ? 0.6f : 1f), 0f, 0f);
             Prim(PrimitiveType.Capsule, skin, new Vector3(0f, segLen * 0.5f, 0f), new Vector3(r * 2f, segLen * 0.5f, r * 2f), seg);
             if (i < segments - 1)
-                Prim(PrimitiveType.Sphere, pad, new Vector3(0f, segLen, 0f), Vector3.one * r * 2.25f, seg);   // joint
+                Prim(PrimitiveType.Sphere, pad, new Vector3(0f, segLen, 0f), Vector3.one * r * 2.08f, seg);   // joint (barely wider than the finger: no sausage links)
             else
             {
                 Prim(PrimitiveType.Sphere, pad, new Vector3(0f, segLen - r * 0.3f, -r * 0.15f), new Vector3(r * 2.1f, r * 2.3f, r * 1.8f), seg);   // fingertip pad
