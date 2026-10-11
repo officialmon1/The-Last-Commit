@@ -27,21 +27,21 @@ public class Problem
 /// <summary>
 /// The Python editor panel on the right side of the screen (plain uGUI, built at runtime, no prefabs).
 ///
-/// Each terminal opens one "track": the problems in Resources/Tracks/&lt;track&gt;.json ordered by stage;
-/// a stage unlocks only after the previous one is passed; the last stage is the Boss. Sub-stages come with I/O written, the player fills in the TODOs;
-/// the Boss is written from scratch, with Ref buttons that show the player's own accepted solutions from earlier stages (view / insert into the editor).
+/// A "track" is the list of problems in Resources/Tracks/&lt;track&gt;.json ordered by stage. Every pillar (CodeTerminal) in the world opens one
+/// level of a track; levels are independent and can be played in any order. Sub-levels come with I/O written, the player fills in the TODOs;
+/// the Boss is written from scratch, with Ref buttons that show the player's own accepted solutions to the other levels (view / insert into the editor).
 ///
 /// Saves are local only: Application.persistentDataPath/save_&lt;track&gt;.json
-/// (which stages are passed, current code and input per stage, accepted code, seconds used of the track timer).
-/// The first time the terminal is opened with a save present it asks "Continue / New game".
+/// (which levels are passed, current code and input per level, accepted code, Panda hints received, seconds used of the track timer).
+/// The first time a pillar is opened with a save present it asks "Continue / New game".
 ///
-/// Usage: <c>CodeEditorUI.Instance.Open("dijkstra")</c>. Esc closes, Ctrl+Enter runs with your own Input, Submit judges with the hidden input.
+/// Usage: <c>CodeEditorUI.Instance.Open("dijkstra", level)</c>. Esc closes, Ctrl+Enter runs with your own Input, Submit (Ctrl+Shift+Enter) judges with the hidden input.
 /// </summary>
 public class CodeEditorUI : MonoBehaviour
 {
     public static CodeEditorUI Instance { get; private set; }
     public static bool IsOpen => Instance != null && Instance._root != null && Instance._root.activeSelf;
-    public string CurrentProblemText => !_runStarted || (_choiceRoot != null && _choiceRoot.activeSelf) || _problem == null
+    public string CurrentProblemText => !_runStarted || _pendingSave != null || _problem == null   // blank only while the Continue / New game choice is pending
         ? "" : _problem.title + "\n" + _problem.description;
     public string CurrentCode => _code != null ? _code.text : "";
     public string CurrentTestResults => _lastTestResults;
@@ -58,11 +58,10 @@ public class CodeEditorUI : MonoBehaviour
     [Tooltip("Extra overall scale (1 = none)")] public float uiScale = 1f;
     [Tooltip("Debug: press this key to use up the timer immediately (to preview the death sequence)")] public Key debugTimeUpKey = Key.F9;
 
-    GameObject _root, _refRoot, _refBar, _choiceRoot;
-    Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText;
+    GameObject _root, _refRoot, _refBar, _choiceRoot, _hintsRoot;
+    Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceText, _hintsTitle, _hintsText;
     InputField _code, _stdin, _refField;
-    Button _runBtn, _submitBtn, _pyBtn;
-    Transform _stageBar;
+    Button _runBtn, _submitBtn, _pyBtn, _choiceBtn1, _choiceBtn2;
     Font _mono, _ui;
     CanvasScaler _scaler;
     int _lastScreenH;
@@ -80,10 +79,6 @@ public class CodeEditorUI : MonoBehaviour
     static readonly Color ForestAccentClose = new Color(0.357f, 0.322f, 0.278f);
     static readonly Color ForestAccentRef = new Color(0.47f, 0.38f, 0.29f);
     static readonly Color ForestDanger = new Color(0.86f, 0.42f, 0.33f);
-    static readonly Color ForestStageLocked = new Color(0.173f, 0.192f, 0.165f);
-    static readonly Color ForestStageUnlocked = new Color(0.267f, 0.29f, 0.251f);
-    static readonly Color ForestStageCurrent = new Color(0.737f, 0.584f, 0.263f);
-    static readonly Color ForestStagePassed = new Color(0.306f, 0.486f, 0.337f);
     static Sprite _roundedSprite;
     static Sprite RoundedSprite => _roundedSprite ??= MakeRoundedSprite(32, 9);
 
@@ -127,7 +122,7 @@ public class CodeEditorUI : MonoBehaviour
     readonly Dictionary<string, string> _passedCode = new Dictionary<string, string>();
     readonly Dictionary<string, string> _codeCache = new Dictionary<string, string>();
     readonly Dictionary<string, string> _stdinCache = new Dictionary<string, string>();
-    readonly List<Button> _stageBtns = new List<Button>();
+    readonly Dictionary<string, List<string>> _hints = new Dictionary<string, List<string>>();   // Panda hints received per problem (up to MaxHints each)
     string _shownSlug;   // which problem's code the editor currently shows (cached under this slug on switch/close)
     bool _running;
     string _pandaProblemKey, _lastTestResults = "No runs yet.";
@@ -139,7 +134,22 @@ public class CodeEditorUI : MonoBehaviour
 
     float SecondsLeft => Mathf.Max(0f, trackTimeLimitSeconds - _runElapsed);
     bool TimeUp => _runStarted && SecondsLeft <= 0f;
-    bool IsUnlocked(int i) => i == 0 || (i > 0 && i < _problems.Count && _passed.Contains(_problems[i - 1].slug));
+    bool AllPassed => _problems.Count > 0 && _problems.TrueForAll(p => _passed.Contains(p.slug));
+    /// <summary>Whether level <paramref name="stage"/> (0-based) of a track is accepted (false until that track has been opened once).</summary>
+    public bool IsPassed(string track, int stage) => _runStarted && track == _track && stage >= 0 && stage < _problems.Count && _passed.Contains(_problems[stage].slug);
+
+    public const int MaxHints = 3;
+    static readonly List<string> NoHints = new List<string>();
+    /// <summary>Panda hints received for the current problem, oldest first (kept in the local save).</summary>
+    public IReadOnlyList<string> CurrentHints => _problem != null && _hints.TryGetValue(_problem.slug, out var h) ? h : NoHints;
+    public void AddHint(string text)
+    {
+        if (_problem == null) return;
+        if (!_hints.TryGetValue(_problem.slug, out var h)) _hints[_problem.slug] = h = new List<string>();
+        h.Add(text);
+        RefreshHints();
+        SaveLocal();
+    }
     string SavePath => Path.Combine(Application.persistentDataPath, "save_" + _track + ".json");
 
     void Awake()
@@ -154,6 +164,7 @@ public class CodeEditorUI : MonoBehaviour
         _root.SetActive(false);
         _refRoot.SetActive(false);
         _choiceRoot.SetActive(false);
+        _hintsRoot.SetActive(false);
         PythonRunner.Init();
     }
 
@@ -174,7 +185,8 @@ public class CodeEditorUI : MonoBehaviour
         if (kb != null)
         {
             if (kb.escapeKey.wasPressedThisFrame) { Close(); return; }
-            if (kb.enterKey.wasPressedThisFrame && (kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed)) RunCode(submit: false);
+            if (kb.enterKey.wasPressedThisFrame && (kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed))
+                RunCode(submit: kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);   // Ctrl+Enter = Run, Ctrl+Shift+Enter = Submit
         }
         // Activate whichever box was clicked (independent of the EventSystem click path: on some machines clicking an InputField does not focus it)
         var mouse = Mouse.current;
@@ -200,11 +212,12 @@ public class CodeEditorUI : MonoBehaviour
 
     // ------------------------------------------------------------------ Open / close / stage selection
 
-    public void Open(string track)
+    /// <summary>Opens level <paramref name="stage"/> (0-based) of a track. Called by the pillar (CodeTerminal) the player is looking at.</summary>
+    public void Open(string track, int stage = 0)
     {
-        if (IsOpen) return;
-        if (_running && track != _track) return;
+        if (IsOpen || _running) return;
         _root.SetActive(true);
+        _hintsRoot.SetActive(true);
         SetPlayerLocked(true);
         _output.text = "";
 
@@ -212,31 +225,32 @@ public class CodeEditorUI : MonoBehaviour
         {
             _track = track;
             _problems = LoadTrack(track);
-            RebuildStageBar();
+            RebuildRefBar();
             var save = LoadSave();
             if (save != null && (save.passed.Count > 0 || save.elapsedSeconds > 1f))
             {
                 // a save exists: ask whether to continue or start over
                 int left = Mathf.Max(0, trackTimeLimitSeconds - Mathf.CeilToInt(save.elapsedSeconds));
-                _choiceText.text = $"Saved game found: {save.passed.Count}/{_problems.Count} stages cleared, {left / 60:00}:{left % 60:00} left.";
-                _choiceRoot.SetActive(true);
                 _pendingSave = save;
+                _pendingStage = stage;
+                ShowChoice($"Saved game found: {save.passed.Count}/{_problems.Count} levels cleared, {left / 60:00}:{left % 60:00} left.",
+                    "Continue", ChooseContinue, ForestAccentSubmit, "New game", ChooseNewGame, new Color(0.55f, 0.28f, 0.24f));
                 return;
             }
             StartFresh();
         }
-        SelectStage(_current);
+        SelectStage(stage);
     }
 
     SaveData _pendingSave;
+    int _pendingStage;
 
     void ChooseContinue()
     {
         _choiceRoot.SetActive(false);
         ApplySave(_pendingSave);
         _pendingSave = null;
-        PickDefaultStage();
-        SelectStage(_current);
+        SelectStage(_pendingStage);
     }
 
     void ChooseNewGame()
@@ -245,7 +259,7 @@ public class CodeEditorUI : MonoBehaviour
         _pendingSave = null;
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to delete the save: " + e.Message); }
         StartFresh();
-        SelectStage(_current);
+        SelectStage(_pendingStage);
     }
 
     void StartFresh()
@@ -254,26 +268,37 @@ public class CodeEditorUI : MonoBehaviour
         _passedCode.Clear();
         _codeCache.Clear();
         _stdinCache.Clear();
+        _hints.Clear();
         _runElapsed = 0f;
         _runCompleted = false;
         _timeUpFired = false;
         _runStarted = true;
         _shownSlug = null;
         _pandaProblemKey = null;
-        PickDefaultStage();
+        _current = -1;
     }
 
-    // Default to the first unlocked stage that is not passed yet; if all are passed, stay on the Boss
-    void PickDefaultStage()
+    /// <summary>The two-button overlay on top of the panel (Continue / New game, Accepted / Keep editing).</summary>
+    void ShowChoice(string text, string label1, Action on1, Color color1, string label2, Action on2, Color color2)
     {
-        _current = -1;
-        for (int i = 0; i < _problems.Count; i++) if (IsUnlocked(i) && !_passed.Contains(_problems[i].slug)) { _current = i; break; }
-        if (_current < 0) _current = _problems.Count - 1;
+        _choiceText.text = text;
+        SetChoiceButton(_choiceBtn1, label1, on1, color1);
+        SetChoiceButton(_choiceBtn2, label2, on2, color2);
+        _choiceRoot.SetActive(true);
+    }
+
+    static void SetChoiceButton(Button b, string label, Action onClick, Color color)
+    {
+        b.GetComponentInChildren<Text>().text = label;
+        b.targetGraphic.color = color;
+        b.onClick.RemoveAllListeners();
+        b.onClick.AddListener(() => onClick());
     }
 
     void SelectStage(int i)
     {
-        if (_running || i < 0 || i >= _problems.Count || !IsUnlocked(i)) return;
+        if (_running || i < 0 || i >= _problems.Count) return;
+        if (_pendingSave == null) _choiceRoot.SetActive(false);   // switching level dismisses an "Accepted" overlay
         if (_shownSlug != null) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
         _current = i;
         var p = _problem;
@@ -287,7 +312,7 @@ public class CodeEditorUI : MonoBehaviour
                 PandaService.Instance.SendEvent("reset");
         }
         _shownSlug = p.slug;
-        _title.text = p.title;
+        _title.text = $"Level {i + 1}/{_problems.Count} · {p.title}";
         _problemText.text = string.IsNullOrEmpty(p.sample_output) ? p.description
             : p.description + "\n\nSample input is pre-filled in the Input box. Expected output for it:\n" + p.sample_output.TrimEnd();
         _code.text = _codeCache.TryGetValue(p.slug, out var cached) ? cached : p.starter_code;
@@ -295,7 +320,7 @@ public class CodeEditorUI : MonoBehaviour
         _output.text = "";
         _refRoot.SetActive(false);
         _status.text = _passed.Contains(p.slug) ? "Already accepted. You can still re-run or improve it."
-            : "Run uses the Input box.  Submit judges with hidden input.";
+            : "Run uses the Input box (Ctrl+Enter).  Submit judges with hidden input (Ctrl+Shift+Enter).";
         // No Python installed: explain in the status line, show the download button, and put the full install steps in the Output box
         bool noPython = PythonRunner.PythonPath == null;
         _pyBtn.gameObject.SetActive(noPython);
@@ -304,7 +329,8 @@ public class CodeEditorUI : MonoBehaviour
             _status.text = "Python 3 not found. Click Get Python, install it, then restart the game.";
             _output.text = PythonRunner.InstallHint;
         }
-        RefreshStageBar();
+        RefreshRefBar();
+        RefreshHints();
         _codeHelper.ResetHistory();
         _stdinHelper.ResetHistory();
         _code.ActivateInputField();
@@ -313,9 +339,11 @@ public class CodeEditorUI : MonoBehaviour
 
     public void Close()
     {
-        if (_choiceRoot.activeSelf) return;   // the Continue / New game choice is still pending, do not close
+        if (_pendingSave != null) return;   // the Continue / New game choice is still pending, do not close
+        _choiceRoot.SetActive(false);
         if (_shownSlug != null) { _codeCache[_shownSlug] = _code.text; _stdinCache[_shownSlug] = _stdin.text; }
         _root.SetActive(false);
+        _hintsRoot.SetActive(false);
         _refRoot.SetActive(false);
         SetPlayerLocked(false);
         SaveLocal();
@@ -357,6 +385,7 @@ public class CodeEditorUI : MonoBehaviour
     // ------------------------------------------------------------------ Local save
 
     [Serializable] class Entry { public string slug; public string text; }
+    [Serializable] class HintEntry { public string slug; public List<string> hints = new List<string>(); }
     [Serializable]
     class SaveData
     {
@@ -366,6 +395,7 @@ public class CodeEditorUI : MonoBehaviour
         public List<Entry> passedCode = new List<Entry>();
         public List<Entry> code = new List<Entry>();
         public List<Entry> stdin = new List<Entry>();
+        public List<HintEntry> hints = new List<HintEntry>();
     }
 
     SaveData LoadSave()
@@ -387,6 +417,7 @@ public class CodeEditorUI : MonoBehaviour
         foreach (var e in s.passedCode) _passedCode[e.slug] = e.text;
         foreach (var e in s.code) _codeCache[e.slug] = e.text;
         foreach (var e in s.stdin) _stdinCache[e.slug] = e.text;
+        foreach (var e in s.hints) _hints[e.slug] = new List<string>(e.hints);
     }
 
     void SaveLocal()
@@ -398,6 +429,7 @@ public class CodeEditorUI : MonoBehaviour
         foreach (var kv in _passedCode) s.passedCode.Add(new Entry { slug = kv.Key, text = kv.Value });
         foreach (var kv in _codeCache) s.code.Add(new Entry { slug = kv.Key, text = kv.Value });
         foreach (var kv in _stdinCache) s.stdin.Add(new Entry { slug = kv.Key, text = kv.Value });
+        foreach (var kv in _hints) s.hints.Add(new HintEntry { slug = kv.Key, hints = new List<string>(kv.Value) });
         try { File.WriteAllText(SavePath, JsonUtility.ToJson(s, true)); }
         catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to write the save: " + e.Message); }
     }
@@ -421,7 +453,7 @@ public class CodeEditorUI : MonoBehaviour
     // Runs while the game runs, even with the panel closed; fires TrackTimeUp exactly once
     void TickRun()
     {
-        if (!_runStarted || _runCompleted || _choiceRoot.activeSelf) return;
+        if (!_runStarted || _runCompleted || _pendingSave != null) return;   // paused only while the Continue / New game choice is pending
         if (Keyboard.current != null && Keyboard.current[debugTimeUpKey].wasPressedThisFrame) _runElapsed = trackTimeLimitSeconds;
         if (TimeUp)
         {
@@ -444,7 +476,7 @@ public class CodeEditorUI : MonoBehaviour
         GUI.Label(new Rect(Screen.width - 200 * k, 12 * k, 184 * k, 30 * k), t, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * k), alignment = TextAnchor.MiddleRight, normal = { textColor = TimeUp ? ForestDanger : ForestTextCream } });
     }
 
-    // ------------------------------------------------------------------ Stage bar / reference code
+    // ------------------------------------------------------------------ Ref bar / hints / reference code
 
     // Detach before Destroy: Destroy only takes effect at the end of the frame, and the rebuild in the same frame must not count the old children
     static void ClearChildren(Transform t)
@@ -454,49 +486,45 @@ public class CodeEditorUI : MonoBehaviour
         foreach (var c in old) { c.SetParent(null); Destroy(c.gameObject); }
     }
 
-    void RebuildStageBar()
+    // Ref buttons: view your own accepted solutions to the other levels
+    void RebuildRefBar()
     {
-        ClearChildren(_stageBar);
-        _stageBtns.Clear();
-        for (int i = 0; i < _problems.Count; i++)
-        {
-            int idx = i;
-            bool boss = i == _problems.Count - 1 && _problems.Count > 1;
-            _stageBtns.Add(MakeButton("Stage" + i, _stageBar, boss ? "BOSS" : $"{i + 1}", () => SelectStage(idx), ForestStageLocked));
-        }
-        // Ref buttons: view your own accepted solutions from earlier stages
         ClearChildren(_refBar.transform);
         var lbl = Label("RefLabel", _refBar.transform, _ui, fontSize - 2, ForestTextMuted, TextAnchor.MiddleLeft);
-        lbl.text = "Your earlier solutions:";
+        lbl.text = "Your other solutions:";
         lbl.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 10;
-        for (int i = 0; i < _problems.Count - 1; i++)
+        for (int i = 0; i < _problems.Count; i++)
         {
             int idx = i;
             MakeButton("Ref" + i, _refBar.transform, $"Ref {i + 1}", () => ShowReference(idx), ForestAccentRef);
         }
     }
 
-    void RefreshStageBar()
+    // The Ref row always keeps its place (fixed layout); a Ref is clickable only for another level that is already passed
+    void RefreshRefBar()
     {
-        for (int i = 0; i < _stageBtns.Count; i++)
-        {
-            var b = _stageBtns[i];
-            bool passed = _passed.Contains(_problems[i].slug);
-            bool unlocked = IsUnlocked(i);
-            b.interactable = unlocked;
-            b.targetGraphic.color = i == _current ? ForestStageCurrent : passed ? ForestStagePassed : unlocked ? ForestStageUnlocked : ForestStageLocked;
-            bool boss = i == _problems.Count - 1 && _problems.Count > 1;
-            b.GetComponentInChildren<Text>().text = (boss ? "BOSS" : $"{i + 1}") + (passed ? " ✓" : unlocked ? "" : " 🔒");
-        }
-        // The Ref row always keeps its place (fixed layout); a Ref is clickable only if that stage is passed and before the current one
         int k = 0;
         foreach (Transform c in _refBar.transform)
         {
             var b = c.GetComponent<Button>();
             if (b == null) continue;
-            b.interactable = k < _current && _passed.Contains(_problems[k].slug);
+            b.interactable = k != _current && _passed.Contains(_problems[k].slug);
             k++;
         }
+    }
+
+    void RefreshHints()
+    {
+        var hints = CurrentHints;
+        _hintsTitle.text = $"Panda's hints   {hints.Count}/{MaxHints}";
+        if (hints.Count == 0)
+        {
+            _hintsText.text = "No hints yet for this level. Click \"Ask Panda for a Hint\" (up to " + MaxHints + " per level); every hint stays listed here.";
+            return;
+        }
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < hints.Count; i++) sb.Append(i + 1).Append(". ").Append(hints[i]).Append(i + 1 < hints.Count ? "\n\n" : "");
+        _hintsText.text = sb.ToString();
     }
 
     void ShowReference(int stageIndex)
@@ -543,7 +571,7 @@ public class CodeEditorUI : MonoBehaviour
         }
         string text = r.stdout;
         if (r.stderr.Length > 0) text += (text.Length > 0 ? "\n" : "") + r.stderr;
-        _output.text = text;
+        if (!submit) _output.text = text;
         _running = false;
 
         if (!submit)
@@ -560,26 +588,58 @@ public class CodeEditorUI : MonoBehaviour
             if (r.timedOut || r.exitCode != 0 || sampleMismatch) ReportToPanda(false);
             return;
         }
+        // Submit: the player only sees the verdict, never the hidden test's output (the full output still goes to Panda as context)
         bool passed = !r.timedOut && r.exitCode == 0 && Normalize(r.stdout) == Normalize(problem.expected_output);
         if (passed)
         {
             bool first = _passed.Add(problem.slug);
             _passedCode[problem.slug] = code;
-            bool isBoss = _current == _problems.Count - 1;
-            _status.text = isBoss ? $"✓ Accepted   {r.runMs} ms   —   BOSS cleared, track complete!"
-                : $"✓ Accepted   {r.runMs} ms   —   Stage {_current + 2} unlocked";
-            RefreshStageBar();
-            if (isBoss) _runCompleted = true;
+            bool allDone = AllPassed;
+            _status.text = $"✓ Accepted   {r.runMs} ms";
+            _output.text = "Hidden test passed.";
+            RefreshRefBar();
+            if (allDone) _runCompleted = true;
             SaveLocal();
             ReportToPanda(true);
-            if (isBoss && first) TrackCompleted?.Invoke(_track);
+            if (allDone && first) TrackCompleted?.Invoke(_track);
+            ShowChoice(allDone ? $"✓ Accepted!  Level {_current + 1} cleared.\nAll {_problems.Count} levels are done, well played!"
+                    : $"✓ Accepted!  Level {_current + 1} cleared  ({_passed.Count}/{_problems.Count} done).\nLeave and walk to another pillar for the next level.",
+                "Leave terminal", () => { _choiceRoot.SetActive(false); Close(); }, ForestAccentSubmit,
+                "Keep editing", () => _choiceRoot.SetActive(false), ForestAccentClose);
         }
         else
         {
             _status.text = r.timedOut ? "✗ Time limit exceeded" : r.exitCode != 0 ? $"✗ Runtime error (exit {r.exitCode})   {r.runMs} ms" : $"✗ Wrong answer   {r.runMs} ms";
+            _output.text = r.timedOut ? "Your program took too long on the hidden test."
+                : r.exitCode != 0 && r.stderr.Length > 0 ? r.stderr
+                : "Your output did not match the hidden test. Use Run with your own Input to debug.";
             ReportToPanda(false);
         }
         _lastTestResults = _status.text + "\n" + text;
+    }
+
+    /// <summary>
+    /// Silent judge for Panda: runs the current code on the hidden test without touching progress.
+    /// onDone(passed, summary): passed = the code is already correct, so Panda tells the player to Submit instead of spending a hint.
+    /// </summary>
+    public async void CheckSolution(Action<bool, string> onDone)
+    {
+        if (_problem == null || _running || PythonRunner.PythonPath == null) { onDone(false, _lastTestResults); return; }
+        var problem = _problem;
+        _running = true;
+        _status.text = "Panda is checking your code...";
+        var r = await PythonRunner.RunAsync(_code.text, problem.stdin, Mathf.Max(1, problem.run_timeout_seconds));
+        if (this == null) return;
+        _running = false;
+        bool passed = r.error == null && !r.timedOut && r.exitCode == 0 && Normalize(r.stdout) == Normalize(problem.expected_output);
+        string summary = r.error != null ? "Runner error: " + r.error
+            : passed ? "Hidden test: PASSED. The code is already correct."
+            : r.timedOut ? "Hidden test: time limit exceeded"
+            : r.exitCode != 0 ? "Hidden test: runtime error\n" + r.stderr
+            : "Hidden test: wrong answer (the output does not match)";
+        _lastTestResults = summary;
+        _status.text = passed ? "Your code passes the hidden test. Click Submit!" : "Run uses the Input box (Ctrl+Enter).  Submit judges with hidden input (Ctrl+Shift+Enter).";
+        onDone(passed, summary);
     }
 
     void ReportToPanda(bool solved)
@@ -647,19 +707,16 @@ public class CodeEditorUI : MonoBehaviour
         _timerLabel = Label("Timer", header, _mono, fontSize + 2, ForestTextCream, TextAnchor.MiddleRight);
         _timerLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = fontSize * 9;
 
-        // Stage bar
-        _stageBar = Row("Stages", panel.transform, fontSize * 2);
-
         // Problem description (scrollable)
         var descBox = Panel("Problem", panel.transform, ForestBoxBg);
         Fix(descBox.gameObject, fontSize * 9f);
         _problemText = ScrollableText(descBox, _ui, fontSize - 1, ForestTextCream);
 
-        // Code box (fixed at 18 lines, scrolls vertically)
+        // Code box (fixed at 20 lines, scrolls vertically)
         _code = MakeInputField("Code", panel.transform, "# write Python here");
         _code.onValueChanged.AddListener(_ => _lastCodeEditTime = Time.unscaledTime);
         _codeHelper = _code.gameObject.AddComponent<CodeInputHelper>();
-        Fix(_code.gameObject, fontSize * 18);
+        Fix(_code.gameObject, fontSize * 20);
 
         // The player's own input (stdin)
         var inLabel = Label("InputLabel", panel.transform, _ui, fontSize - 3, ForestTextMuted, TextAnchor.LowerLeft);
@@ -720,15 +777,35 @@ public class CodeEditorUI : MonoBehaviour
         _choiceText = Label("Text", choice.transform, _ui, fontSize + 2, ForestTextCream, TextAnchor.MiddleCenter);
         _choiceText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
         var cbar = Row("Bar", choice.transform, fontSize * 2.4f);
-        MakeButton("Continue", cbar, "Continue", ChooseContinue, ForestAccentSubmit);
-        MakeButton("New", cbar, "New game", ChooseNewGame, new Color(0.55f, 0.28f, 0.24f));
+        _choiceBtn1 = MakeButton("Choice1", cbar, "Continue", () => { }, ForestAccentSubmit);     // labels and actions are set per use by ShowChoice
+        _choiceBtn2 = MakeButton("Choice2", cbar, "New game", () => { }, new Color(0.55f, 0.28f, 0.24f));
 
-        // ---------- Reference code panel on the left ----------
+        // ---------- Panda hints for the current level (top left). The speech bubble gets overwritten by Panda's face reactions; this list does not ----------
+        var hintsPanel = Panel("HintsPanel", canvasGo.transform, new Color(0.075f, 0.1f, 0.082f, 0.96f));
+        _hintsRoot = hintsPanel.gameObject;
+        var hrt = hintsPanel.rectTransform;
+        hrt.anchorMin = new Vector2(0.015f, 0.66f);
+        hrt.anchorMax = new Vector2(0.515f, 0.93f);
+        hrt.offsetMin = hrt.offsetMax = Vector2.zero;
+        var hvl = hintsPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        hvl.padding = new RectOffset(fontSize * 2 / 3, fontSize * 2 / 3, fontSize / 2, fontSize / 2);
+        hvl.spacing = fontSize / 2;
+        hvl.childControlWidth = hvl.childControlHeight = true;
+        hvl.childForceExpandWidth = true;
+        hvl.childForceExpandHeight = false;
+        _hintsTitle = Label("Title", hintsPanel.transform, _ui, fontSize + 1, ForestAccentHint, TextAnchor.MiddleLeft);
+        _hintsTitle.fontStyle = FontStyle.Bold;
+        Fix(_hintsTitle.gameObject, fontSize * 1.5f);
+        var hintsBox = Panel("Hints", hintsPanel.transform, ForestBoxBg);
+        hintsBox.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
+        _hintsText = ScrollableText(hintsBox, _ui, fontSize - 1, ForestTextCream);
+
+        // ---------- Reference code panel on the left, below the hints ----------
         var refPanel = Panel("ReferencePanel", canvasGo.transform, new Color(0.075f, 0.1f, 0.082f, 0.96f));
         _refRoot = refPanel.gameObject;
         var rrt = refPanel.rectTransform;
         rrt.anchorMin = new Vector2(0.015f, 0.03f);
-        rrt.anchorMax = new Vector2(0.515f, 0.97f);
+        rrt.anchorMax = new Vector2(0.515f, 0.63f);
         rrt.offsetMin = rrt.offsetMax = Vector2.zero;
         var rvl = refPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         rvl.padding = new RectOffset(fontSize * 2 / 3, fontSize * 2 / 3, fontSize / 2, fontSize / 2);
@@ -875,6 +952,7 @@ public class CodeEditorUI : MonoBehaviour
         btn.onClick.AddListener(onClick);
         var t = Label("Label", img.transform, _ui, fontSize, Color.white, TextAnchor.MiddleCenter);
         Stretch(t.rectTransform, 4);
+        t.verticalOverflow = VerticalWrapMode.Overflow;   // never truncate: with Truncate a label one pixel taller than the button vanishes entirely (small windows)
         t.text = label;
         return btn;
     }

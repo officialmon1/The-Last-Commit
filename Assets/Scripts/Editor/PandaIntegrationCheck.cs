@@ -108,7 +108,7 @@ namespace PandaEditor
                 var problems = typeof(CodeEditorUI).GetMethod("LoadTrack", BindingFlags.Static | BindingFlags.NonPublic)
                     .Invoke(null, new object[] { "dijkstra" });
                 Set(editor, "_problems", problems);
-                Call(editor, "RebuildStageBar");
+                Call(editor, "RebuildRefBar");
                 Call(editor, "StartFresh");
                 editor.Open(track);
                 Require(player.inputLocked && editor.CurrentProblemText.Contains("Priority Queue"), "Terminal flow/context failed.");
@@ -120,10 +120,9 @@ namespace PandaEditor
                 Require(editor.CurrentTestResults.Contains("differs"), "Failed sample run was not reported.");
                 editor.GetComponentsInChildren<Button>(true).First(b => b.name == "PandaHint").onClick.Invoke();
                 await Until(() => !Field<bool>(companion, "_hinting"));
-                var history = Field<List<string>>(companion, "_history");
-                Require(history.Count == 1 && companion.speechBubble.bubbleText.text.Contains("Hint 1/3"), "Panda hint button failed.");
+                Require(editor.CurrentHints.Count == 1 && companion.speechBubble.bubbleText.text.Contains("Hint 1/3"), "Panda hint button failed.");
                 Call(editor, "SelectStage", 0);
-                Require(history.Count == 1, "Reopening the same stage must preserve hint history.");
+                Require(editor.CurrentHints.Count == 1, "Reopening the same level must preserve hint history.");
                 code.text = "import sys, heapq\nh=[]\nlines=sys.stdin.read().splitlines()\nfor line in lines[1:]:\n p=line.split()\n if p[0]=='push': heapq.heappush(h,int(p[1]))\n else: print(heapq.heappop(h))\n";
                 Require(editor.CurrentCode == code.text && editor.MinutesLeft > 0, "Code/timer context failed.");
                 Call(editor, "RunCode", true);
@@ -133,13 +132,13 @@ namespace PandaEditor
                     && !companion.speechBubble.bubbleText.text.Contains("Hint 1/3"));
                 Call(editor, "SelectStage", 1);
                 await Until(() => status.failed_runs == 0);
-                Require(history.Count == 0 && editor.CurrentProblemText.Contains("Adjacency List"), "Stage unlock/hint reset failed.");
+                Require(editor.CurrentHints.Count == 0 && editor.CurrentProblemText.Contains("Adjacency List"), "Level switch/hint reset failed.");
                 var payload = new HintRequest { problem = "quoted \"problem\"\nnext line", code = code.text,
                     previous_hints = new List<string> { "hint\nline" }, minutes_left = 3.5f };
                 var restored = JsonUtility.FromJson<HintRequest>(JsonUtility.ToJson(payload));
                 Require(restored.problem == payload.problem && restored.minutes_left == 3.5f
                     && restored.previous_hints[0] == payload.previous_hints[0], "Hint JSON payload failed.");
-                return "PANDA_INTEGRATION_CHECK_PASSED: Python Run/Submit, failures, hints, celebration, stage reset and context.";
+                return "PANDA_INTEGRATION_CHECK_PASSED: Python Run/Submit, failures, hints, celebration, level switch and context.";
             }
             finally
             {
