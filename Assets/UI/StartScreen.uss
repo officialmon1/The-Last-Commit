@@ -1,0 +1,421 @@
+/* =========================================
+   FULL-SCREEN BACKGROUND
+   ========================================= */
+
+.screen {
+    position: relative;
+    flex-grow: 1;
+    overflow: hidden;
+
+    background-color: rgb(20, 21, 34);
+    color: rgb(245, 233, 210);
+}
+
+.forest-background {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+
+    background-image: url("Images/forest-background.mp4");
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.background-shade {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+
+    background-color: rgba(15, 13, 18, 0.28);
+}
+
+/* The C# controller centers and scales this container. */
+
+.menu-shell {
+    position: absolute;
+
+    width: 680px;
+    height: 800px;
+
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================
+   MAIN MENU
+   ========================================= */
+
+.menu-panel {
+    width: 100%;
+    align-items: center;
+    flex-shrink: 0;
+
+    padding-top: 30px;
+    padding-right: 38px;
+    padding-bottom: 28px;
+    padding-left: 38px;
+
+    background-color: rgba(18, 20, 17, 0.79);
+
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-top-color: rgba(193, 154, 73, 0.6);
+    border-bottom-color: rgba(193, 154, 73, 0.6);
+
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.eyebrow {
+    font-size: 13px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
+
+    color: rgb(212, 179, 111);
+
+    margin-bottom: 14px;
+}
+
+.small-divider {
+    width: 44px;
+    height: 1px;
+    flex-shrink: 0;
+
+    background-color: rgb(193, 154, 73);
+    margin-bottom: 20px;
+}
+
+/* =========================================
+   TITLE
+   ========================================= */
+
+.title {
+    width: 100%;
+    flex-shrink: 0;
+
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+
+    margin-top: 0;
+    margin-bottom: 0;
+
+    padding-top: 0;
+    padding-bottom: 0;
+
+    color: rgb(250, 240, 220);
+
+    text-shadow: 0px 3px 5px rgba(0, 0, 0, 0.95);
+}
+
+.title-first {
+    font-size: 65px;
+}
+
+.title-second {
+    font-size: 88px;
+
+    color: rgb(255, 210, 122);
+
+    margin-top: -8px;
+    margin-bottom: 16px;
+}
+
+.tagline {
+    width: 100%;
+
+    white-space: normal;
+    font-size: 21px;
+
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+
+    color: rgb(245, 233, 210);
+
+    text-shadow: 0px 2px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* =========================================
+   GOLD DIVIDER
+   ========================================= */
+
+.ornament {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+
+    margin-top: 22px;
+    margin-bottom: 22px;
+}
+
+.ornament-line {
+    width: 75px;
+    height: 1px;
+
+    background-color: rgba(193, 154, 73, 0.65);
+}
+
+.ornament-mark {
+    width: 7px;
+    height: 7px;
+
+    margin-left: 14px;
+    margin-right: 14px;
+
+    background-color: rgb(255, 179, 71);
+    rotate: 45deg;
+}
+
+.description {
+    width: 100%;
+    white-space: normal;
+
+    font-size: 18px;
+    -unity-text-align: middle-center;
+
+    color: rgb(225, 214, 192);
+
+    margin-bottom: 24px;
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+
+.menu-button {
+    width: 390px;
+    min-height: 58px;
+    flex-shrink: 0;
+
+    margin-top: 5px;
+    margin-bottom: 5px;
+
+    padding-top: 12px;
+    padding-right: 20px;
+    padding-bottom: 12px;
+    padding-left: 20px;
+
+    font-size: 22px;
+
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+
+    border-top-width: 2px;
+    border-right-width: 1px;
+    border-bottom-width: 3px;
+    border-left-width: 1px;
+
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+
+    text-shadow: 0px 2px 2px rgba(0, 0, 0, 0.85);
+}
+
+.primary-button {
+    background-color: rgb(32, 53, 36);
+    color: rgb(255, 222, 160);
+
+    border-top-color: rgb(183, 153, 91);
+    border-right-color: rgb(114, 93, 53);
+    border-bottom-color: rgb(14, 24, 16);
+    border-left-color: rgb(114, 93, 53);
+}
+
+.primary-button:hover {
+    background-color: rgb(48, 74, 46);
+    color: rgb(255, 236, 194);
+
+    border-top-color: rgb(255, 210, 122);
+    border-right-color: rgb(193, 154, 73);
+    border-left-color: rgb(193, 154, 73);
+}
+
+.primary-button:active {
+    background-color: rgb(23, 41, 29);
+
+    border-top-color: rgb(14, 24, 16);
+    border-bottom-color: rgb(114, 93, 53);
+}
+
+.secondary-button {
+    background-color: rgb(43, 35, 30);
+    color: rgb(232, 216, 187);
+
+    border-top-color: rgb(120, 105, 80);
+    border-right-color: rgb(79, 66, 51);
+    border-bottom-color: rgb(19, 16, 14);
+    border-left-color: rgb(79, 66, 51);
+}
+
+.secondary-button:hover {
+    background-color: rgb(62, 45, 39);
+    color: rgb(255, 222, 160);
+
+    border-top-color: rgb(193, 154, 73);
+}
+
+.secondary-button:active {
+    background-color: rgb(32, 25, 22);
+    border-top-color: rgb(19, 16, 14);
+}
+
+.menu-button:focus {
+    border-right-color: rgb(255, 210, 122);
+    border-left-color: rgb(255, 210, 122);
+}
+
+.bottom-note {
+    margin-top: 18px;
+
+    font-size: 15px;
+    -unity-font-style: italic;
+
+    color: rgb(197, 180, 147);
+}
+
+/* =========================================
+   INSTRUCTIONS / BRIEFING CARDS
+   ========================================= */
+
+.card {
+    width: 100%;
+    align-items: center;
+    flex-shrink: 0;
+
+    padding-top: 28px;
+    padding-right: 40px;
+    padding-bottom: 28px;
+    padding-left: 40px;
+
+    background-color: rgba(18, 20, 17, 0.95);
+
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+
+    border-top-color: rgb(159, 130, 76);
+    border-right-color: rgb(85, 73, 49);
+    border-bottom-color: rgb(159, 130, 76);
+    border-left-color: rgb(85, 73, 49);
+
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.panel-title {
+    width: 100%;
+    font-size: 39px;
+
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+
+    white-space: normal;
+
+    color: rgb(255, 210, 122);
+
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.instruction {
+    width: 100%;
+    flex-shrink: 0;
+
+    margin-bottom: 18px;
+}
+
+.instruction-title {
+    font-size: 21px;
+    -unity-font-style: bold;
+
+    color: rgb(242, 205, 139);
+
+    margin-bottom: 5px;
+}
+
+.instruction-text {
+    font-size: 17px;
+    white-space: normal;
+
+    color: rgb(225, 214, 192);
+}
+
+.briefing-text {
+    width: 100%;
+    font-size: 20px;
+    white-space: normal;
+
+    -unity-text-align: middle-center;
+
+    color: rgb(225, 214, 192);
+
+    margin-bottom: 18px;
+}
+
+.quote-block {
+    width: 100%;
+    flex-shrink: 0;
+
+    margin-top: 10px;
+    margin-bottom: 20px;
+
+    padding-top: 18px;
+    padding-right: 18px;
+    padding-bottom: 18px;
+    padding-left: 18px;
+
+    background-color: rgba(104, 40, 62, 0.17);
+
+    border-left-width: 2px;
+    border-left-color: rgb(193, 154, 73);
+}
+
+.quote {
+    font-size: 21px;
+    -unity-font-style: italic;
+
+    white-space: normal;
+    -unity-text-align: middle-center;
+
+    color: rgb(245, 233, 210);
+}
+
+.quote-credit {
+    font-size: 16px;
+    -unity-text-align: middle-center;
+
+    color: rgb(193, 154, 73);
+
+    margin-top: 9px;
+}
+
+.warning {
+    width: 100%;
+    font-size: 17px;
+
+    -unity-font-style: italic;
+    -unity-text-align: middle-center;
+
+    white-space: normal;
+
+    color: rgb(219, 169, 144);
+
+    margin-bottom: 18px;
+}
+
+.hidden {
+    display: none;
+}

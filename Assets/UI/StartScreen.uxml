@@ -1,0 +1,214 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="StartScreen.uss" />
+
+    <ui:VisualElement name="start-screen" class="screen">
+
+        <!-- Background layers do not intercept button clicks. -->
+        <ui:VisualElement
+            class="forest-background"
+            picking-mode="Ignore"
+        />
+
+        <ui:VisualElement
+            class="background-shade"
+            picking-mode="Ignore"
+        />
+
+        <ui:VisualElement name="menu-shell" class="menu-shell">
+
+            <!-- MAIN MENU -->
+            <ui:VisualElement name="menu-panel" class="menu-panel">
+
+                <ui:Label
+                    text="AN ENCHANTED FOREST ESCAPE"
+                    class="eyebrow"
+                />
+
+                <ui:VisualElement class="small-divider" />
+
+                <ui:Label
+                    text="THE LAST"
+                    class="title title-first"
+                />
+
+                <ui:Label
+                    text="COMMIT"
+                    class="title title-second"
+                />
+
+                <ui:Label
+                    text="The forest is a lock.&#10;Your code is the key."
+                    class="tagline"
+                />
+
+                <ui:VisualElement class="ornament">
+                    <ui:VisualElement class="ornament-line" />
+                    <ui:VisualElement class="ornament-mark" />
+                    <ui:VisualElement class="ornament-line" />
+                </ui:VisualElement>
+
+                <ui:Label
+                    text="Four coding challenges. Thirty-six minutes.&#10;Escape before the forest claims you."
+                    class="description"
+                />
+
+                <ui:Button
+                    name="enter-button"
+                    text="Enter the Forest"
+                    class="menu-button primary-button"
+                />
+
+                <ui:Button
+                    name="how-to-play-button"
+                    text="How to Play"
+                    class="menu-button secondary-button"
+                />
+
+                <ui:Label
+                    text="The forest is waiting."
+                    class="bottom-note"
+                />
+
+            </ui:VisualElement>
+
+            <!-- HOW TO PLAY -->
+            <ui:VisualElement
+                name="instructions-panel"
+                class="card hidden"
+            >
+
+                <ui:Label
+                    text="YOUR WAY OUT"
+                    class="eyebrow"
+                />
+
+                <ui:Label
+                    text="How to Play"
+                    class="panel-title"
+                />
+
+                <ui:VisualElement class="ornament">
+                    <ui:VisualElement class="ornament-line" />
+                    <ui:VisualElement class="ornament-mark" />
+                    <ui:VisualElement class="ornament-line" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="instruction">
+                    <ui:Label
+                        text="Explore the clearing"
+                        class="instruction-title"
+                    />
+                    <ui:Label
+                        text="Search the mushrooms, bushes, and broken pillars for clues."
+                        class="instruction-text"
+                    />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="instruction">
+                    <ui:Label
+                        text="Release the four locks"
+                        class="instruction-title"
+                    />
+                    <ui:Label
+                        text="Solve four LeetCode challenges at the Escape Console. Each passing solution releases one lock."
+                        class="instruction-text"
+                    />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="instruction">
+                    <ui:Label
+                        text="Ask the panda"
+                        class="instruction-title"
+                    />
+                    <ui:Label
+                        text="When you are stuck, ask for a hint. The panda guides you without giving away the answer."
+                        class="instruction-text"
+                    />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="instruction">
+                    <ui:Label
+                        text="Watch the time"
+                        class="instruction-title"
+                    />
+                    <ui:Label
+                        text="All four challenges share one 36-minute countdown. Failed submissions can be retried, but the clock keeps running."
+                        class="instruction-text"
+                    />
+                </ui:VisualElement>
+
+                <ui:Button
+                    name="instructions-back-button"
+                    text="Return to Menu"
+                    class="menu-button secondary-button"
+                />
+
+            </ui:VisualElement>
+
+            <!-- STORY BRIEFING -->
+            <ui:VisualElement
+                name="briefing-panel"
+                class="card hidden"
+            >
+
+                <ui:Label
+                    text="THE FOUR LOCKS"
+                    class="eyebrow"
+                />
+
+                <ui:Label
+                    text="No path leads out."
+                    class="panel-title"
+                />
+
+                <ui:VisualElement class="ornament">
+                    <ui:VisualElement class="ornament-line" />
+                    <ui:VisualElement class="ornament-mark" />
+                    <ui:VisualElement class="ornament-line" />
+                </ui:VisualElement>
+
+                <ui:Label
+                    text="Beyond the trees, a barrier holds the clearing shut. The broken pillars are its locks."
+                    class="briefing-text"
+                />
+
+                <ui:Label
+                    text="Your only way out is to solve all four coding challenges before time runs out."
+                    class="briefing-text"
+                />
+
+                <ui:VisualElement class="quote-block">
+                    <ui:Label
+                        text="“I can give you clues. But the solutions have to be yours.”"
+                        class="quote"
+                    />
+
+                    <ui:Label
+                        text="— The Panda"
+                        class="quote-credit"
+                    />
+                </ui:VisualElement>
+
+                <ui:Label
+                    text="Stay too long, and you become part of the forest."
+                    class="warning"
+                />
+
+                <ui:Button
+                    name="begin-button"
+                    text="Begin Escape"
+                    class="menu-button primary-button"
+                />
+
+                <ui:Button
+                    name="briefing-back-button"
+                    text="Return to Menu"
+                    class="menu-button secondary-button"
+                />
+
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

@@ -6,6 +6,7 @@ using Panda;
 /// A pillar in the world that opens one level of a track. Look at it within interactDistance and press E to open the Python editor on that level.
 /// The four prerequisite levels are independent; the larger final pillar unlocks after all four are passed.
 /// Attach to any object with a Collider; without a Renderer it spawns a placeholder pillar with the level number floating above it.
+/// On an object that already has a model (e.g. a broken ruin) the level label floats above that model instead.
 /// </summary>
 public class CodeTerminal : MonoBehaviour
 {
@@ -13,6 +14,10 @@ public class CodeTerminal : MonoBehaviour
     [Tooltip("Which level of the track this pillar opens (1 = first problem)")] public int level = 1;
     [Tooltip("Larger pillar for the final problem, with prerequisite progress and a locked/ready state")] public bool finalProblem;
     public float interactDistance = 3f;
+    [Tooltip("GameStart hides this pillar until the game starts. Turn off for pillars that are part of the scenery (ruins, the portal).")]
+    public bool hideUntilGameStart = true;
+    [Tooltip("Optional light tinted with the pillar's state (to do / solved / locked / final), so it can be spotted from afar.")]
+    public Light stateLight;
 
     static readonly Color TodoColor = new Color(0.2f, 0.75f, 0.7f);
     static readonly Color DoneColor = new Color(0.35f, 0.8f, 0.35f);
@@ -24,10 +29,18 @@ public class CodeTerminal : MonoBehaviour
     GUIStyle _style;
     Material _mat;
     TextMesh _label;
+    Renderer[] _model;   // the object's own model when it has one; the label follows its top
 
     void Awake()
     {
-        if (GetComponentInChildren<Renderer>() != null) return;
+        if (GetComponentInChildren<Renderer>() != null)
+        {
+            _model = GetComponentsInChildren<Renderer>(true);
+            CreateLabel(Vector3.zero);
+            _label.transform.localScale = InverseScale(transform.lossyScale);
+            PlaceLabelAboveModel();
+            return;
+        }
         var pillar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         pillar.name = "Pillar";
         pillar.transform.SetParent(transform, false);
@@ -40,10 +53,15 @@ public class CodeTerminal : MonoBehaviour
         _mat.SetColor("_BaseColor", TodoColor);
         pillar.GetComponent<Renderer>().sharedMaterial = _mat;
 
-        // level number floating above the pillar, turned toward the player every frame
+        CreateLabel(new Vector3(0f, halfHeight * 2f + 0.5f, 0f));
+    }
+
+    /// <summary>Level number floating above the pillar, turned toward the player every frame.</summary>
+    void CreateLabel(Vector3 localPosition)
+    {
         var lbl = new GameObject("Label", typeof(TextMesh));
         lbl.transform.SetParent(transform, false);
-        lbl.transform.localPosition = new Vector3(0f, halfHeight * 2f + 0.5f, 0f);
+        lbl.transform.localPosition = localPosition;
         var tm = lbl.GetComponent<TextMesh>();
         tm.text = level.ToString();
         tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -56,6 +74,23 @@ public class CodeTerminal : MonoBehaviour
         _label = tm;
     }
 
+    static Vector3 InverseScale(Vector3 s) => new Vector3(1f / Mathf.Max(0.0001f, s.x), 1f / Mathf.Max(0.0001f, s.y), 1f / Mathf.Max(0.0001f, s.z));
+
+    /// <summary>Keeps the label just above whatever part of the model is visible (a repaired ruin is taller than the broken one).</summary>
+    void PlaceLabelAboveModel()
+    {
+        bool any = false;
+        Bounds b = default;
+        foreach (var r in _model)
+        {
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy || r.transform == _label.transform) continue;
+            if (!any) { b = r.bounds; any = true; }
+            else b.Encapsulate(r.bounds);
+        }
+        if (!any) return;
+        _label.transform.position = new Vector3(b.center.x, b.max.y + 0.7f, b.center.z);
+    }
+
     void Update()
     {
         var cam = Camera.main;
@@ -64,6 +99,7 @@ public class CodeTerminal : MonoBehaviour
             var d = _label.transform.position - cam.transform.position;
             d.y = 0f;
             if (d.sqrMagnitude > 0.001f) _label.transform.rotation = Quaternion.LookRotation(d);   // a TextMesh reads correctly when its forward points away from the viewer
+            if (_model != null) PlaceLabelAboveModel();
         }
         var editor = CodeEditorUI.Instance;
         _passedShown = editor != null && editor.IsPassed(track, level - 1);
@@ -72,7 +108,9 @@ public class CodeTerminal : MonoBehaviour
         if (state != _stateShown)
         {
             _stateShown = state;
-            if (_mat != null) _mat.SetColor("_BaseColor", !unlocked ? LockedColor : _passedShown ? DoneColor : finalProblem ? FinalColor : TodoColor);
+            var color = !unlocked ? LockedColor : _passedShown ? DoneColor : finalProblem ? FinalColor : TodoColor;
+            if (_mat != null) _mat.SetColor("_BaseColor", color);
+            if (stateLight != null) stateLight.color = color;
         }
         if (_label != null) _label.text = finalProblem
             ? "FINAL\n" + (!unlocked ? $"Locked  {editor?.PrerequisitesPassed(track) ?? 0}/{level - 1}" : _passedShown ? "Solved" : "Ready")
@@ -80,6 +118,7 @@ public class CodeTerminal : MonoBehaviour
 
         _inRange = false;
         if (CodeEditorUI.IsOpen || cam == null) return;
+        if (GameStart.Instance != null && !GameStart.Started) return;   // still on the start screen
         var ct = cam.transform;
         // a thick ray so precise aiming is not needed
         if (Physics.SphereCast(ct.position, 0.3f, ct.forward, out var hit, interactDistance) && hit.collider.GetComponentInParent<CodeTerminal>() == this)
@@ -119,7 +158,7 @@ public class CodeTerminal : MonoBehaviour
         _style ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, normal = { textColor = ForestTheme.TextCream }, font = ForestTheme.ElegantFont() };
         _style.fontSize = Mathf.RoundToInt(22 * k);
         string hint = finalProblem && _stateShown == 0
-            ? $"Final problem locked ({CodeEditorUI.Instance?.PrerequisitesPassed(track) ?? 0}/{level - 1}) - Complete the four nearby pillars first"
+            ? $"Final problem locked ({CodeEditorUI.Instance?.PrerequisitesPassed(track) ?? 0}/{level - 1}) - Solve the four broken pillars first"
             : $"{(finalProblem ? "Final problem" : "Level " + level)}{(_passedShown ? "  (solved)" : "")}   -   Press E to open";
         GUI.Label(new Rect(0, Screen.height * 0.6f, Screen.width, 40 * k), hint, _style);
     }
