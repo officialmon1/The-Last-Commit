@@ -123,13 +123,21 @@ namespace Panda
         }
 
         /// <summary>The spot beside the player the panda wants to stand on, dropped onto the ground.</summary>
-        Vector3 FollowSpot()
+        Vector3 FollowSpot() => FollowSpot(followOffset.z);
+
+        /// <summary>
+        /// Same as <see cref="FollowSpot()"/> but with an overridable forward push: when the terminal is open
+        /// the player is standing right up against it, so pushing forward by the usual followOffset.z would land
+        /// the panda inside/behind the terminal (and the ground raycast below would then stand it on the
+        /// terminal's roof instead of the floor). Waiting directly beside the player (forwardOffset = 0) keeps it clear.
+        /// </summary>
+        Vector3 FollowSpot(float forwardOffset)
         {
             Vector3 fwd = followTarget.forward; fwd.y = 0f;
             if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
             fwd.Normalize();
             Vector3 right = Vector3.Cross(Vector3.up, fwd);
-            Vector3 spot = followTarget.position + right * followOffset.x + fwd * followOffset.z;
+            Vector3 spot = followTarget.position + right * followOffset.x + fwd * forwardOffset;
             spot.y = followTarget.position.y + followOffset.y;
 
             // stand on whatever is below (ignoring the player and the panda itself)
@@ -146,6 +154,20 @@ namespace Panda
 
         void Follow()
         {
+            // the player can't move while the terminal is open, so snap straight to the spot
+            // instead of walking over: the panda should already be waiting there, ready for hints.
+            // Stand directly beside the player (no forward push) so it doesn't land inside/behind the terminal.
+            if (CodeEditorUI.IsOpen)
+            {
+                _groundPos = FollowSpot(0f);
+                _walking = false;
+                transform.position = _groundPos + Vector3.up * _feetOffset;
+                Vector3 toPlayer = followTarget.position - transform.position; toPlayer.y = 0f;
+                if (toPlayer.sqrMagnitude > 0.0001f)
+                    transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix;
+                return;
+            }
+
             Vector3 spot = FollowSpot();
             Vector3 flat = spot - _groundPos; flat.y = 0f;
             float dist = flat.magnitude;
