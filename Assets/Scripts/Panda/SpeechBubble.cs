@@ -5,10 +5,11 @@ using UnityEngine.UI;
 namespace Panda
 {
     /// <summary>
-    /// Screen-space bubble showing what the panda is "saying", with up to two reply buttons.
-    /// Floats above <see cref="anchor"/>'s head while it's walking/following; once it's parked still
-    /// beside the terminal (the code editor is open), it moves to the panda's right instead, near the
-    /// top of its head, clear of both the panda itself and the code editor panel. Docks to a corner if off screen.
+    /// Screen-space bubble showing what the panda is "saying", with up to two reply buttons, in the forest/amber
+    /// theme (amber frame, green parchment fill, storybook font, leaf accents).
+    /// Floats above <see cref="anchor"/>'s head while it's walking/following (smoothed, so the text does not shake);
+    /// while the code editor is open the panda is parked in the bottom-left corner and the bubble is pinned to the
+    /// top-right of the free area instead. Docks to a corner if the panda is off screen.
     /// </summary>
     public class SpeechBubble : MonoBehaviour
     {
@@ -25,8 +26,6 @@ namespace Panda
         public float headGap = 0.25f;
         [Tooltip("Keep the bubble this many pixels away from the screen edge.")]
         public float screenMargin = 16f;
-        [Tooltip("Extra pixels of breathing room beyond the head's own on-screen edge, while parked at the terminal.")]
-        public float parkedSideGap = 40f;
 
         public const string IdleText = "Stuck on something? Click me for a hint.";
 
@@ -35,6 +34,9 @@ namespace Panda
         Vector2 _dockPivot, _dockAnchorMin, _dockAnchorMax, _dockPos;
         RectTransform _tail;
         Collider _anchorCollider;
+        bool _attached;        // floating above the panda (true) or docked in the corner (false)
+        float _switchTime;     // last time it switched between the two
+        Vector2 _smooth;       // smoothed screen position of the head point
 
         void Awake()
         {
@@ -121,64 +123,59 @@ namespace Panda
             var cam = Camera.main;
             if (anchor == null || cam == null) { Dock(); return; }
 
-            // right edge we may use: the code editor covers the right side of the screen while it's open
-            float maxX = CodeEditorUI.IsOpen ? Screen.width * 0.52f : Screen.width;
-
-            // While walking/following, the bubble floats above the panda's head as usual. Once it's parked
-            // still beside the terminal, it moves to the panda's right instead, near the top of its head --
-            // clear of the panda's own model and (via maxX above) clear of the code editor panel too.
-            bool parked = CodeEditorUI.IsOpen;
-
-            if (_anchorCollider == null || _anchorCollider.transform != anchor) _anchorCollider = anchor.GetComponentInChildren<Collider>();
-            Vector3 head = _anchorCollider != null
-                ? new Vector3(_anchorCollider.bounds.center.x, _anchorCollider.bounds.max.y, _anchorCollider.bounds.center.z)
-                : anchor.position + Vector3.up * 1.2f;
-            Vector3 sp = cam.WorldToScreenPoint(parked ? head : head + Vector3.up * headGap);
-
-            bool onScreen = sp.z > 0f && sp.x > 0f && sp.x < maxX && sp.y > 0f && sp.y < Screen.height;
-            if (!onScreen) { Dock(); return; }
-
-            float scale = _canvas.scaleFactor;
-            Vector2 size = _rect.rect.size * scale;
-            float tailH = 20f * scale; // half the diagonal of the rotated tail square
-
-            _rect.anchorMin = _rect.anchorMax = Vector2.zero;
-            _tail.gameObject.SetActive(true);
-
-            if (parked)
+            if (CodeEditorUI.IsOpen)
             {
-                // box sits to the right of the head, near the top, with real clearance so it never touches the
-                // face; tail points left, back at the panda. The gap is measured from the head's own on-screen
-                // edge (not its center), so it stays clear of the face regardless of how close/zoomed-in the
-                // panda appears -- a fixed pixel gap from the center alone would get swallowed up close.
-                float headHalfWidthPx = 0f;
-                if (_anchorCollider != null)
-                {
-                    Vector3 edge = new Vector3(_anchorCollider.bounds.max.x, head.y, head.z);
-                    Vector3 spEdge = cam.WorldToScreenPoint(edge);
-                    headHalfWidthPx = Mathf.Abs(spEdge.x - sp.x);
-                }
-                _rect.pivot = new Vector2(0f, 1f);
-                float x = Mathf.Clamp(sp.x + headHalfWidthPx + parkedSideGap * scale, screenMargin, maxX - screenMargin - size.x);
-                float y = Mathf.Clamp(sp.y, screenMargin + size.y, Screen.height - screenMargin);
-                _rect.position = new Vector3(x, y, 0f);
-
-                _tail.anchorMin = _tail.anchorMax = new Vector2(0f, 1f);
-                float tailY = Mathf.Clamp((sp.y - y) / scale, -_rect.rect.height + 20f, -20f);
-                _tail.anchoredPosition = new Vector2(0f, tailY);
+                // Coding: the panda is parked whole in the bottom-left corner, so the bubble sits still in the top-right of the
+                // free area (just left of the editor panel, just below the hints panel). Pinned, so the text never moves.
+                float scale = _canvas.scaleFactor;
+                _tail.gameObject.SetActive(false);
+                _rect.anchorMin = _rect.anchorMax = Vector2.zero;
+                _rect.pivot = new Vector2(1f, 1f);
+                _rect.position = new Vector3(Screen.width * 0.52f - screenMargin * scale, Screen.height * 0.66f - screenMargin * scale, 0f);
+                _attached = false;
+                return;
             }
+
+            // Walking/following: float above the head. The anchor point ignores the walking bob and the screen position is
+            // smoothed, otherwise the text shakes while the panda trots; attaching/docking has hysteresis so the bubble can't
+            // flip back and forth when the panda hovers at the edge of the screen.
+            var panda = PandaCompanion.Instance;
+            Vector3 headTop;
+            if (panda != null && anchor == panda.transform) headTop = panda.HeadTop;
             else
             {
-                // box floats above the head, centered; tail points down at the panda
-                _rect.pivot = new Vector2(0.5f, 0f);
-                float x = Mathf.Clamp(sp.x, screenMargin + size.x / 2f, maxX - screenMargin - size.x / 2f);
-                float y = Mathf.Clamp(sp.y + tailH, screenMargin, Screen.height - screenMargin - size.y);
-                _rect.position = new Vector3(x, y, 0f);
-
-                _tail.anchorMin = _tail.anchorMax = new Vector2(0.5f, 0f);
-                float tailX = Mathf.Clamp((sp.x - x) / scale, -_rect.rect.width / 2f + 20f, _rect.rect.width / 2f - 20f);
-                _tail.anchoredPosition = new Vector2(tailX, 0f);
+                if (_anchorCollider == null || _anchorCollider.transform != anchor) _anchorCollider = anchor.GetComponentInChildren<Collider>();
+                headTop = _anchorCollider != null
+                    ? new Vector3(_anchorCollider.bounds.center.x, _anchorCollider.bounds.max.y, _anchorCollider.bounds.center.z)
+                    : anchor.position + Vector3.up * 1.2f;
             }
+            Vector3 sp = cam.WorldToScreenPoint(headTop + Vector3.up * headGap);
+
+            float inset = _attached ? -60f : 60f;   // attached: let it drift a little past the edge before docking; docked: must be well inside to come back
+            bool onScreen = sp.z > 0f && sp.x > inset && sp.x < Screen.width - inset && sp.y > inset && sp.y < Screen.height - inset;
+            if (onScreen != _attached && Time.unscaledTime - _switchTime > 0.5f)
+            {
+                _attached = onScreen;
+                _switchTime = Time.unscaledTime;
+                _smooth = sp;
+            }
+            if (!_attached) { Dock(); return; }
+            _smooth = Vector2.Lerp(_smooth, sp, 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f));
+
+            float k = _canvas.scaleFactor;
+            Vector2 size = _rect.rect.size * k;
+            float tailH = 20f * k; // half the diagonal of the rotated tail square
+
+            _rect.anchorMin = _rect.anchorMax = Vector2.zero;
+            _rect.pivot = new Vector2(0.5f, 0f);
+            float x = Mathf.Clamp(_smooth.x, screenMargin + size.x / 2f, Screen.width - screenMargin - size.x / 2f);
+            float y = Mathf.Clamp(_smooth.y + tailH, screenMargin, Screen.height - screenMargin - size.y);
+            _rect.position = new Vector3(x, y, 0f);
+
+            // the tail points down at the panda; slide it along the bottom edge if the bubble got clamped
+            _tail.gameObject.SetActive(true);
+            float tailX = Mathf.Clamp((_smooth.x - x) / k, -_rect.rect.width / 2f + 20f, _rect.rect.width / 2f - 20f);
+            _tail.anchoredPosition = new Vector2(tailX, 0f);
         }
 
         void Dock()

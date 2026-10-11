@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Panda
 {
     /// <summary>
-    /// Lives on the 3D panda. Follows the player around (or patrols side to side if there is
-    /// no player), reacts to the backend's live face/hand read of the player (mirrors the
+    /// Lives on the 3D panda. Waits beside the player and, once they walk out of its circle, runs ahead
+    /// to lead the way (or patrols side to side if there is no player); reacts to the backend's live face/hand read of the player (mirrors the
     /// HELP_* / PROGRESS offers from the web prototype), and asks the backend for a hint when clicked.
     /// Before hinting it judges the code quietly: a solution that already passes gets "go submit"
     /// instead of a hint. Hint history is kept per level by CodeEditorUI (shown in its hints panel,
@@ -21,8 +21,9 @@ namespace Panda
         [Tooltip("Where the panda stands relative to the player: x = right, z = forward. Kept fairly far forward " +
                  "so it stays inside the camera's view instead of drifting out to the side and off screen.")]
         public Vector3 followOffset = new Vector3(-1.1f, 0f, 2.3f);
-        [Tooltip("Only start walking once the panda is this far from its spot (stops it jittering).")]
-        public float followSlack = 0.6f;
+        [Tooltip("The panda waits still while the player is within this many metres of it (turning around or walking past it does nothing); " +
+                 "once the player is further away it runs to the spot ahead of them and waits there again.")]
+        public float waitRadius = 3f;
         public float followSpeed = 4.5f;
         public float turnSpeed = 6f;
 
@@ -30,14 +31,12 @@ namespace Panda
         [Tooltip("Rescale the model so it is this tall (metres). 0 = keep the model's own size.")]
         public float targetHeight = 1.1f;
 
-        [Header("Terminal wait spot (pinned to a fixed spot on screen)")]
-        [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit.")]
+        [Header("Terminal wait spot (pinned on screen, bottom-left; may hover above the ground, never sinks below it)")]
+        [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit while the code editor is open.")]
         public float editorWaitViewportX = 0.22f;
-        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit.")]
+        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit; 0.15 keeps the whole body in view.")]
         public float editorWaitViewportY = 0.15f;
-        [Tooltip("How far in front of the camera (metres) that spot sits. Keep this closer than terminals are " +
-                 "ever stood next to, so the panda is never hidden behind one -- bring it closer (and it'll " +
-                 "happily overlap the terminal) rather than push it back and risk it vanishing behind geometry.")]
+        [Tooltip("How far in front of the camera (metres): closer = bigger on screen. Keep this closer than a pillar is ever stood next to, so the pillar can't hide the panda (CodeTerminal steps the player back to this distance).")]
         public float editorWaitDepth = 2.3f;
 
         [Header("Movement")]
@@ -57,7 +56,12 @@ namespace Panda
         Vector3 _basePos;
         Vector3 _groundPos;
         float _feetOffset; // how far the pivot sits above the model's feet
+        float _height = 1.1f; // model height after FitModel
         bool _walking;
+
+        /// <summary>World point at the top of the panda's head without the walking bob: a steady anchor for the speech bubble.</summary>
+        public Vector3 HeadTop => (followTarget != null ? _groundPos : transform.position - Vector3.up * _feetOffset) + Vector3.up * _height;
+        Quaternion _idleFacing;   // where the panda turned to when it stopped (toward the player at that moment); it does not track the player afterwards
         long _currentOfferId = -1;
         long _handledId = 0;
         bool _hinting;
@@ -84,7 +88,10 @@ namespace Panda
             {
                 _groundPos = FollowSpot();
                 transform.position = _groundPos;
+                Vector3 toPlayer = followTarget.position - _groundPos; toPlayer.y = 0f;
+                if (toPlayer.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix;
             }
+            _idleFacing = transform.rotation;
             if (speechBubble != null && speechBubble.anchor == null) speechBubble.anchor = transform;
             if (PandaService.Instance != null)
             {
@@ -148,20 +155,18 @@ namespace Panda
         }
 
         /// <summary>
-        /// Where the panda waits while the code editor is open. Projecting a fixed viewport point into world
-        /// space (rather than offsetting from the camera's position along its own axes) is what actually makes
-        /// this appear in the same place on screen every time: a pure position+direction offset still shifts on
-        /// screen with the camera's pitch (looking down at the terminal vs. level), because the projection back
-        /// onto the screen depends on the camera's current rotation, not just where the point sits in the world.
-        /// Viewport coordinates compensate for that by construction. No ground raycast either -- that was
-        /// picking up whatever happened to be nearby (the terminal's own collider, a wall) and is exactly what
-        /// made this drift between different terminals.
+        /// Where the panda waits while the code editor is open: a fixed spot on screen (bottom-left, close to the camera),
+        /// so it is always fully in view. It may hover above the ground for that; it is only lifted, never lowered, when
+        /// the projected point would be under the floor (looking down), so it cannot sink into the ground.
         /// </summary>
         Vector3 EditorWaitSpot()
         {
             var cam = Camera.main;
             if (cam == null) return FollowSpot();
-            return cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
+            Vector3 spot = cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
+            float ground = GroundSnap(spot).y;
+            if (spot.y < ground) spot.y = ground;   // may hover above the ground, but never sink into it when the player looks down
+            return spot;
         }
 
         /// <summary>Drops a world point onto whatever's below it (ignoring the player and the panda itself).</summary>
@@ -196,15 +201,30 @@ namespace Panda
                 return;
             }
 
+            // Wait quietly while the player is inside the circle: turning around or walking right past the panda
+            // must not move it. Only once they are further away does it run to the spot ahead of them and park again.
+            Vector3 toPlayer = followTarget.position - _groundPos; toPlayer.y = 0f;
+            if (!_walking)
+            {
+                if (toPlayer.magnitude < waitRadius)
+                {
+                    transform.position = _groundPos + Vector3.up * _feetOffset;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, _idleFacing, Time.deltaTime * turnSpeed);
+                    return;
+                }
+                _walking = true;
+            }
+
             Vector3 spot = FollowSpot();
             Vector3 flat = spot - _groundPos; flat.y = 0f;
             float dist = flat.magnitude;
-
-            // walk over once we've fallen behind, stop when we're close again
-            if (dist > followSlack) _walking = true;
-            else if (dist < 0.1f) _walking = false;
-
-            if (_walking)
+            if (dist < 0.1f)
+            {
+                // arrived ahead of the player: turn to face them once, then hold still until they wander off again
+                _walking = false;
+                _idleFacing = toPlayer.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(toPlayer, Vector3.up) * ModelUpFix : transform.rotation;
+            }
+            else
             {
                 // speed up if the player sprinted far ahead, so we never get lost
                 float speed = followSpeed * Mathf.Max(1f, dist / 2f);
@@ -217,12 +237,10 @@ namespace Panda
             float bob = _walking ? Mathf.Abs(Mathf.Sin(Time.time * bobSpeed * 4f)) * bobHeight : 0f;
             transform.position = _groundPos + Vector3.up * (bob + _feetOffset);
 
-            // face where we're walking, otherwise turn to look at the player
-            Vector3 lookDir = _walking ? flat : followTarget.position - transform.position;
-            lookDir.y = 0f;
-            if (lookDir.sqrMagnitude > 0.0001f)
+            // face where we're walking
+            if (_walking && flat.sqrMagnitude > 0.0001f)
             {
-                var look = Quaternion.LookRotation(lookDir, Vector3.up) * ModelUpFix;
+                var look = Quaternion.LookRotation(flat, Vector3.up) * ModelUpFix;
                 transform.rotation = Quaternion.Slerp(transform.rotation, look, Time.deltaTime * turnSpeed);
             }
         }
@@ -245,6 +263,7 @@ namespace Panda
 
             // some exports have the pivot in the middle of the body; lift the panda so its feet touch the ground
             _feetOffset = transform.position.y - b.min.y;
+            _height = b.size.y;
 
             var box = GetComponent<BoxCollider>();
             if (box != null)
