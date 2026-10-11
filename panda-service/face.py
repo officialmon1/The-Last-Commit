@@ -30,6 +30,7 @@ FACE_LOST_GRACE_S = 1.5    # keep the last face box this long if hands cover the
 WEIGHTS = {"furrow": 1.0, "worry": 0.8, "tense": 0.9, "squint": 0.7}
 
 # What the AI/prompt layer should see
+# Player states
 PLAYER_STATE = {"calm": "calm", "happy": "calm", "concerned": "stuck",
                 "stressed": "stressed", "away": "calm"}
 
