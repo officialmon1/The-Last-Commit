@@ -19,7 +19,7 @@
     top: 0;
     bottom: 0;
 
-    background-image: url("Images/forest-background.png");
+    background-image: url("Images/forest-background.gif");
     -unity-background-scale-mode: scale-and-crop;
 }
 

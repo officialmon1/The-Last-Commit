@@ -55,6 +55,10 @@ Lingtong Meng, Monica Barbosa, Shirina Daniel & Zara Maraj
 The-Last-Commit/
 ├── .gitignore
 ├── README.md
+├── .vscode/
+│   ├── extensions.json
+│   ├── launch.json
+│   └── settings.json
 ├── Assets/
 │   ├── InputSystem_Actions.inputactions
 │   ├── InputSystem_Actions.inputactions.meta
@@ -63,8 +67,11 @@ The-Last-Commit/
 │   ├── Readme.asset
 │   ├── Readme.asset.meta
 │   ├── Scenes.meta
+│   ├── Scripts.meta
 │   ├── Settings.meta
 │   ├── TutorialInfo.meta
+│   ├── UI Toolkit.meta
+│   ├── UI.meta
 │   ├── Materials/
 │   │   ├── AncientColumn01_BaseColor.png
 │   │   ├── AncientColumn01_BaseColor.png.meta
@@ -156,8 +163,29 @@ The-Last-Commit/
 │   │       ├── Willow_Gold.fbx
 │   │       └── Willow_Gold.fbx.meta
 │   ├── Scenes/
+│   │   ├── AmberRuinsLite.meta
+│   │   ├── AmberRuinsLite/
+│   │   │   ├── AmberRuinsLiteBoundaryFog.cs
+│   │   │   ├── AmberRuinsLiteDetail.cs
+│   │   │   ├── AmberRuinsLitePlayer.cs
+│   │   │   ├── Editor/
+│   │   │   │   ├── AmberRuinsLiteBuilder.cs
+│   │   │   │   └── AmberRuinsLitePlayerSetup.cs
+│   │   │   └── Textures/
+│   │   │       └── ForestFloor_Albedo.png
+│   │   ├── AmberRuinsLiteScenes.meta
+│   │   ├── AmberRuinsLiteScenes/
+│   │   │   └── Forest_20261011_010711_237de3a1162647a0aa9b5d033cfb6d76/
+│   │   │       ├── Materials/ (26 files)
+│   │   │       ├── Meshes/ (364 files)
+│   │   │       ├── Scenes/
+│   │   │       │   └── TheAmberRuins_Lite.unity
+│   │   │       └── Textures/ (6 files)
 │   │   ├── SampleScene.unity
-│   │   └── SampleScene.unity.meta
+│   │   ├── SampleScene.unity.meta
+│   ├── Scripts/
+│   │   └── UI/
+│   │       └── StartScreenController.cs
 │   ├── Settings/
 │   │   ├── DefaultVolumeProfile.asset
 │   │   ├── DefaultVolumeProfile.asset.meta
@@ -173,24 +201,33 @@ The-Last-Commit/
 │   │   ├── SampleSceneProfile.asset.meta
 │   │   ├── UniversalRenderPipelineGlobalSettings.asset
 │   │   └── UniversalRenderPipelineGlobalSettings.asset.meta
-│   └── TutorialInfo/
-│       ├── Layout.wlt
-│       ├── Layout.wlt.meta
-│       ├── Readme.cs
-│       ├── Readme.cs.meta
-│       ├── Editor/
-│       │   ├── ReadmeEditor.cs
-│       │   └── ReadmeEditor.cs.meta
-│       ├── Icons/
-│       │   ├── URP.png
-│       │   └── URP.png.meta
-│       └── StyleSheets/
-│           ├── ReadmeEditor.uss
-│           ├── ReadmeEditor.uss.meta
-│           ├── ReadmeEditorDark.uss
-│           ├── ReadmeEditorDark.uss.meta
-│           ├── ReadmeEditorLight.uss
-│           └── ReadmeEditorLight.uss.meta
+│   ├── TutorialInfo/
+│   │   ├── Layout.wlt
+│   │   ├── Layout.wlt.meta
+│   │   ├── Readme.cs
+│   │   ├── Readme.cs.meta
+│   │   ├── Editor/
+│   │   │   ├── ReadmeEditor.cs
+│   │   │   └── ReadmeEditor.cs.meta
+│   │   ├── Icons/
+│   │   │   ├── URP.png
+│   │   │   └── URP.png.meta
+│   │   └── StyleSheets/
+│   │       ├── ReadmeEditor.uss
+│   │       ├── ReadmeEditor.uss.meta
+│   │       ├── ReadmeEditorDark.uss
+│   │       ├── ReadmeEditorDark.uss.meta
+│   │       ├── ReadmeEditorLight.uss
+│   │       └── ReadmeEditorLight.uss.meta
+│   ├── UI Toolkit/
+│   │   └── UnityThemes/
+│   │       └── UnityDefaultRuntimeTheme.tss
+│   └── UI/
+│       ├── Images/
+│       │   └── forest-background.png
+│       ├── StartScreen.uss
+│       ├── StartScreen.uxml
+│       └── StartScreenPanelSettings.asset
 ├── Packages/
 │   ├── manifest.json
 │   └── packages-lock.json
@@ -217,6 +254,7 @@ The-Last-Commit/
 │   ├── ShaderGraphSettings.asset
 │   ├── TagManager.asset
 │   ├── TimeManager.asset
+│   ├── UnityConnectSettings.asset
 │   ├── URPProjectSettings.asset
 │   ├── VersionControlSettings.asset
 │   ├── VFXManager.asset
