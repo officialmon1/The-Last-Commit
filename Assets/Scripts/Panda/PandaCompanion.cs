@@ -31,12 +31,13 @@ namespace Panda
         [Tooltip("Rescale the model so it is this tall (metres). 0 = keep the model's own size.")]
         public float targetHeight = 1.1f;
 
-        [Header("Terminal wait spot (on the ground, bottom-left of the view)")]
-        [Tooltip("While the code editor is open the panda stands on the ground this many metres ahead of the camera " +
-                 "(along its horizontal line of sight). Far enough that its feet are on screen with a level camera.")]
-        public float editorWaitDepth = 3.2f;
-        [Tooltip("...and this many metres to the side of that line (negative = left). Keep it on the left: the editor covers the right half of the screen.")]
-        public float editorWaitSide = -2.4f;
+        [Header("Terminal wait spot (pinned on screen, bottom-left; may hover above the ground, never sinks below it)")]
+        [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit while the code editor is open.")]
+        public float editorWaitViewportX = 0.12f;
+        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit.")]
+        public float editorWaitViewportY = 0.05f;
+        [Tooltip("How far in front of the camera (metres): closer = bigger on screen.")]
+        public float editorWaitDepth = 1.9f;
 
         [Header("Movement")]
         public float patrolDistance = 1.5f;
@@ -154,21 +155,18 @@ namespace Panda
         }
 
         /// <summary>
-        /// Where the panda waits while the code editor is open: on the ground, ahead-left of the camera's horizontal line
-        /// of sight. (A point projected from the screen instead sank it into the floor whenever the player looked down.)
+        /// Where the panda waits while the code editor is open: a fixed spot on screen (bottom-left, close to the camera),
+        /// so it is always fully in view. It may hover above the ground for that; it is only lifted, never lowered, when
+        /// the projected point would be under the floor (looking down), so it cannot sink into the ground.
         /// </summary>
         Vector3 EditorWaitSpot()
         {
             var cam = Camera.main;
             if (cam == null) return FollowSpot();
-            Vector3 fwd = cam.transform.forward; fwd.y = 0f;
-            if (fwd.sqrMagnitude < 0.0001f) { fwd = followTarget.forward; fwd.y = 0f; }
-            if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
-            fwd.Normalize();
-            Vector3 right = Vector3.Cross(Vector3.up, fwd);
-            Vector3 spot = cam.transform.position + fwd * editorWaitDepth + right * editorWaitSide;
-            spot.y = followTarget.position.y;
-            return GroundSnap(spot);
+            Vector3 spot = cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
+            float ground = GroundSnap(spot).y;
+            if (spot.y < ground) spot.y = ground;
+            return spot;
         }
 
         /// <summary>Drops a world point onto whatever's below it (ignoring the player and the panda itself).</summary>
