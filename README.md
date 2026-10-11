@@ -1,32 +1,125 @@
 # The Last Commit 🌲🍄🌿
 
+**What if your dream job depended on your ability to escape another world?**
+
+The Last Commit is a fantasy coding adventure built for Knight Hacks. Explore an enchanted amber-crimson forest, solve programming challenges, and receive support from **Bao Bao**, an AI-powered panda companion. The story gives you **36 minutes** to find your way home before you become part of the world forever.
+
 
 
 ## The Problem
+
+As computer science students, we know the pressure of technical interviews, coding challenges, and the constant pursuit of becoming better programmers. Practicing those skills can feel disconnected from the excitement that first drew us to technology.
+
+We wanted to turn that pressure into an adventure: one where programming is part of the story, progress is visible in the world, and players can ask for help when they need it.
 
 
 
 ## Our Solution
 
+**Welcome to Knight Hacks, a world you were never meant to enter.**
+
+You awaken in a mysterious forest filled with ancient ruins. Your programming skills are your path home, and the countdown never stops. The adventure connects algorithmic problem-solving to the restoration of broken pillars and the search for a magical escape portal.
+
+You are not alone. **Bao Bao** travels with you, carrying guidance inspired by **Grand Bao Bao's book**. He offers coding hints and encouragement as you work through the trials.
+
+The game also explores facial-expression-based interaction using MediaPipe and OpenCV. Visible expression cues can help trigger supportive responses, adding another way for Bao Bao to encourage players.
+
+The goal is to make programming practice feel less like studying and more like an adventure worth surviving.
+
 
 
 ## Key Features
+
+- **Fantasy exploration:** A first-person adventure through an amber-crimson forest with ancient ruins, mossy stone pillars, and a magical escape story.
+- **Programming trials:** Complete partially written programs, run Python solutions, and submit them against predefined test cases.
+- **Visible progression:** Solved challenges restore broken pillars; the integrated scene also unlocks a central Dijkstra challenge after all four prerequisite problems pass.
+- **Countdown-driven gameplay:** The story's 36-minute deadline adds urgency to the journey.
+- **Bao Bao, the AI companion:** Request increasingly specific hints informed by the active problem, your code, recent results, previous hints, and remaining time.
+- **Fallback support:** Built-in hints remain available when an OpenAI API key is not configured.
+- **Face and hand tracking:** Camera-based interaction supports the team's exploration of a more responsive companion.
+- **Saved progress and companion reactions:** Local saves, failure and celebration events, Boss progression, and the flower death/revive sequence are retained.
+- **Automatic local backend startup:** Unity can start and reuse the Panda service using the Windows workflow documented below.
 
 
 
 ## Data
 
+The prototype uses gameplay and interaction data rather than a conventional analytics dataset.
+
+| Data | Purpose |
+| --- | --- |
+| Programming challenges, starter code, and predefined test cases | Define each trial and evaluate submitted solutions. |
+| The player's code and latest run result | Provide execution feedback and context for Bao Bao's hints. |
+| Earlier hints and remaining time | Help the assistant adapt its guidance to the current attempt. |
+| Submission results and saved progress | Drive progression, prerequisite checks, and companion reactions. |
+| Camera input when tracking is enabled | Support face and hand tracking and expression-based interaction. |
+| 3D models, materials, textures, and scenes | Build the forest, ruins, pillars, panda, and other visual elements. |
+
+The OpenAI hint context is described in **How It Works**. Face and hand tracking can be disabled through the scene's **PandaService** settings.
+
 
 
 ### Cost Estimation
+
+Separate development expenses from the recurring cost of generated hints.
+
+| Cost category | Estimation basis |
+| --- | --- |
+| OpenAI-generated hints | The selected model's pricing and the input/output token usage of each request. |
+| Aholo asset generation | The service's applicable plan or credit charges for the asset-generation jobs used. |
+| Local development and execution | The team's hardware and development setup; the documented Panda backend runs locally. |
+| Future hosted services | Hosting or infrastructure costs if a remote deployment is introduced. |
+
+For uncached text requests priced per million tokens:
+
+```text
+Estimated hint cost =
+    (input tokens / 1,000,000 × input rate)
+  + (output tokens / 1,000,000 × output rate)
+
+Estimated session API cost = sum of billable request costs in that session
+```
+
+Account separately for cached-input pricing or any additional billed services when applicable. Use the selected model's rates from the [official OpenAI API pricing documentation](https://developers.openai.com/api/docs/pricing).
+
+Exact dollar totals and measured per-session costs are not documented here. Asset-generation credits should be tracked separately from dollars unless the applicable plan establishes a conversion. When no API key is configured, the documented fallback path provides built-in hints.
 
 
 
 ## Cost Impact Methodology
 
+The following method can be used to evaluate operating costs as the prototype develops:
+
+1. **Separate one-time and recurring costs.** Record asset-generation jobs separately from runtime AI requests.
+2. **Measure representative sessions.** Record request counts and billable token usage for players who request different amounts of help.
+3. **Apply the relevant rates.** Calculate usage costs using the actual configured model and pricing for the chosen service.
+4. **Compare hint modes.** Compare API-generated guidance with the built-in fallback path in terms of cost, usefulness, and response time.
+5. **Evaluate the learning experience.** Consider challenge completion, repeated attempts, and player feedback alongside cost.
+
+These are evaluation steps, not reported benchmark results. No numerical cost savings or learning-outcome improvements are claimed.
+
 
 
 ## How It Works
+
+### Adventure and challenge progression
+
+The story centers on restoring four broken pillars to escape the world. The current `ling-zara` flow described below includes **four prerequisite challenges followed by a fifth, central Dijkstra challenge**. The central challenge remains locked until all four prerequisites pass Submit.
+
+Explore the forest, open a pillar's terminal, complete the code, and use Bao Bao's guidance when needed. Passing submissions advances the game; running code alone does not satisfy the prerequisite checks.
+
+### Controls
+
+| Action | Control |
+| --- | --- |
+| Reveal the pillars | Enter |
+| Move | WASD |
+| Open a pillar terminal | Look at a pillar and press E |
+| Run Python | Ctrl+Enter |
+| Submit a solution | Ctrl+Shift+Enter |
+| Request guidance | **Panda hint** button |
+
+### Existing scene and integration notes
 
 The `ling-zara` scene keeps the `lingtong` first-person code-terminal flow and adds Zara's Panda companion.
 Press Enter to reveal the pillars, then walk with WASD, look at a pillar and press E.
@@ -65,234 +158,99 @@ failure events, the hint button, celebration, all prerequisite combinations, sav
 
 ## Tech Stack
 
+| Technology | Role |
+| --- | --- |
+| Unity 6 | Game engine, scenes, gameplay integration, and rendering. |
+| C# | Game logic, interactions, progression, and Unity-side integration. |
+| Python 3.12 | Panda backend, supporting functionality, and the documented Python execution workflow. |
+| Uvicorn | Runs the local Panda service in the documented manual-start workflow. |
+| HTML | Used for the interactive coding interface described in the project story. |
+| OpenAI API | Generates context-aware coding hints for Bao Bao. |
+| MediaPipe | Face and hand tracking models and interaction support. |
+| OpenCV | Supporting computer-vision functionality. |
+| Blender | 3D asset and environment work. |
+| Aholo / Lux3D | AI-assisted 3D asset generation. |
+| Git and GitHub | Version control and team collaboration. |
+
+ChatGPT, Claude, Perplexity, and GitHub Copilot also supported brainstorming, debugging, research, and implementation during development.
+
 
 
 ## Project Context
+
+The Last Commit was created during **Knight Hacks**. Most of our team had never developed a game before, so we were learning unfamiliar tools while building an interactive experience under hackathon time constraints.
+
+The forest and asset paths retain the earlier **The Amber Ruins** naming, while the project is presented as **The Last Commit**.
+
+### Inspiration
+
+Our love of gaming, storytelling, and computer science inspired us to connect technical interview practice with a fantasy adventure. We wanted programming skills to shape the player's fate and make every solved challenge feel meaningful.
+
+### Challenges we ran into
+
+- Building a 3D game while learning Unity and new game-development workflows.
+- Connecting gameplay, the coding interface, AI-generated hints, and computer vision.
+- Troubleshooting asset compatibility, missing textures, materials, shaders, and rendering.
+- Collaborating on large assets and Unity scene files through Git and GitHub.
+- Balancing the countdown's urgency with accessible, enjoyable programming practice.
+
+### Accomplishments that we're proud of
+
+We turned an ambitious idea into an interactive game during a single hackathon. For most of the team, this was our first game-development experience.
+
+We are especially proud of Bao Bao, the integration of programming challenges into the environment, and the visible progression that gives solved problems a place in the story. Combining the forest, ruins, coding editor, and companion challenged us to learn and build together.
+
+### What we learned
+
+We gained hands-on experience with Unity 6, C#, Python, Blender, OpenAI API integration, MediaPipe, OpenCV, and interactive coding interfaces.
+
+We learned how much coordination is needed when several people contribute scenes, scripts, and assets to one project. We also learned to connect technical functionality with the player's experience through storytelling, progression, and supportive feedback.
+
+Being unfamiliar with a technology should not stop us from trying to build something ambitious.
+
+### What's next for The Last Commit
+
+- Expand the variety and difficulty of programming challenges.
+- Improve Bao Bao's hints and companion interactions.
+- Refine how facial-expression feedback contributes to the experience.
+- Add environments, interactive characters, and puzzles covering more computer science concepts.
+- Develop the prototype into a fuller adventure for programming practice and technical interview preparation.
+
+**Because sometimes, the most important commit isn't the one you push to GitHub. It's the one you make to keep learning.**
 
 
 
 ## Limitations
 
+- **Hackathon scope:** This is a prototype with a limited challenge set and room for further gameplay, polish, and compatibility work.
+- **Generated guidance:** AI hints can be incomplete or incorrect; players should verify suggestions by running and submitting their solutions.
+- **Test coverage:** Passing predefined test cases evaluates those cases and does not establish correctness for every possible input.
+- **Camera-dependent interaction:** Face and hand tracking require camera access and can be affected by lighting and tracking conditions.
+- **Expression interpretation:** Facial-expression cues are approximate and do not establish a player's emotional state or programming difficulty.
+- **Windows setup:** The documented workflow expects Python 3.12, installed backend dependencies, and an accessible `panda-service` folder. The automatic-start instructions describe that setup rather than a standalone package for every machine.
+- **Asset integration:** Materials and shaders may need adjustments when imported into different Unity configurations.
+- **Evaluation:** This README does not report measured learning outcomes, per-session costs, or production-scale performance.
+
 
 
 ## Data Source
+
+The game's challenges, starter programs, predefined test cases, and progress state are supplied by the project. No external challenge collection is identified in this README.
+
+Bao Bao's generated hints come from the OpenAI API when configured; built-in hints support the fallback path. The tracking workflow uses the checked-in MediaPipe models in `panda-service/models`.
+
+The environment combines Unity and Blender work with Aholo-generated assets. Asset filenames and the existing project layout are preserved in **Main Branch File Structure**.
+
+Technical references:
+
+- [Unity 6 Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/UnityManual.html)
+- [OpenAI API pricing documentation](https://developers.openai.com/api/docs/pricing)
+- [MediaPipe Face Landmarker guide](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker)
+- [OpenCV documentation](https://docs.opencv.org/4.x/)
+
+The MediaPipe guide describes facial landmarks and expression blendshape outputs; the game's interpretation of those signals is part of the companion interaction design.
 
 
 
 ## Project Contribution Team
 Lingtong Meng, Monica Barbosa, Shirina Daniel & Zara Maraj
-
-## Main Branch File Structure
-
-```text
-The-Last-Commit/
-├── .gitignore
-├── README.md
-├── .vscode/
-│   ├── extensions.json
-│   ├── launch.json
-│   └── settings.json
-├── Assets/
-│   ├── InputSystem_Actions.inputactions
-│   ├── InputSystem_Actions.inputactions.meta
-│   ├── Materials.meta
-│   ├── Prefabs.meta
-│   ├── Readme.asset
-│   ├── Readme.asset.meta
-│   ├── Scenes.meta
-│   ├── Scripts.meta
-│   ├── Settings.meta
-│   ├── TutorialInfo.meta
-│   ├── UI Toolkit.meta
-│   ├── UI.meta
-│   ├── Materials/
-│   │   ├── AncientColumn01_BaseColor.png
-│   │   ├── AncientColumn01_BaseColor.png.meta
-│   │   ├── Birch_01.png
-│   │   ├── Birch_01.png.meta
-│   │   ├── Boulder01_BaseColor.png
-│   │   ├── Boulder01_BaseColor.png.meta
-│   │   ├── BrokenPillar_BaseColorpng.png
-│   │   ├── BrokenPillar_BaseColorpng.png.meta
-│   │   ├── Bush01_BaseColor.png
-│   │   ├── Bush01_BaseColor.png.meta
-│   │   ├── Fern01_BaseColor.png
-│   │   ├── Fern01_BaseColor.png.meta
-│   │   ├── Fern02_BaseColor.png
-│   │   ├── Fern02_BaseColor.png.meta
-│   │   ├── Flowers01_BaseColor.png
-│   │   ├── Flowers01_BaseColor.png.meta
-│   │   ├── GrassSmall_BaseColor.png
-│   │   ├── GrassSmall_BaseColor.png.meta
-│   │   ├── GrassTall_BaseColor.png
-│   │   ├── GrassTall_BaseColor.png.meta
-│   │   ├── MapleTree02_BaseColor.png
-│   │   ├── MapleTree02_BaseColor.png.meta
-│   │   ├── MossyRock01_BaseColor.png
-│   │   ├── MossyRock01_BaseColor.png.meta
-│   │   ├── Mushroom01_BaseColor.png
-│   │   ├── Mushroom01_BaseColor.png.meta
-│   │   ├── OakTree02_BaseColor.png
-│   │   ├── OakTree02_BaseColor.png.meta
-│   │   ├── OakTree_BaseColor.png
-│   │   ├── OakTree_BaseColor.png.meta
-│   │   ├── Panda_BaseColor.png
-│   │   ├── Panda_BaseColor.png.meta
-│   │   ├── TwistedTree01_BaseColor.png
-│   │   ├── TwistedTree01_BaseColor.png.meta
-│   │   ├── WillowBurgundy_BaseColor.png
-│   │   ├── WillowBurgundy_BaseColor.png.meta
-│   │   ├── WillowDeepGreen01_BaseColor.png
-│   │   ├── WillowDeepGreen01_BaseColor.png.meta
-│   │   ├── WillowGold_BaseColor.png
-│   │   └── WillowGold_BaseColor.png.meta
-│   ├── Prefabs/
-│   │   ├── Characters/
-│   │   │   ├── Panda.fbx
-│   │   │   ├── Panda.fbx.meta
-│   │   │   └── panda.jpg
-│   │   ├── Grass/
-│   │   │   ├── Fern_01.fbx
-│   │   │   ├── Fern_01.fbx.meta
-│   │   │   ├── Fern_02.fbx
-│   │   │   ├── Fern_02.fbx.meta
-│   │   │   ├── Grass_Short.fbx
-│   │   │   ├── Grass_Short.fbx.meta
-│   │   │   ├── Grass_Tall.fbx
-│   │   │   └── Grass_Tall.fbx.meta
-│   │   ├── Rocks/
-│   │   │   ├── Boulder_02.fbx
-│   │   │   ├── Boulder_02.fbx.meta
-│   │   │   ├── MossyRock_01.fbx
-│   │   │   └── MossyRock_01.fbx.meta
-│   │   ├── Ruins/
-│   │   │   ├── AncientColumn_01.fbx
-│   │   │   ├── AncientColumn_01.fbx.meta
-│   │   │   ├── BrokenPillar_01.fbx
-│   │   │   └── BrokenPillar_01.fbx.meta
-│   │   ├── Trees/
-│   │   │   ├── Birch_01.fbx
-│   │   │   ├── Birch_01.fbx.meta
-│   │   │   ├── Maple_01.fbx
-│   │   │   ├── Maple_01.fbx.meta
-│   │   │   ├── Oak_01.fbx
-│   │   │   ├── Oak_01.fbx.meta
-│   │   │   ├── Oak_02.fbx
-│   │   │   ├── Oak_02.fbx.meta
-│   │   │   ├── TwistedTree_01.fbx
-│   │   │   └── TwistedTree_01.fbx.meta
-│   │   ├── Undergrowth/
-│   │   │   ├── Bush_01.fbx
-│   │   │   ├── Bush_01.fbx.meta
-│   │   │   ├── Flowers_01.fbx
-│   │   │   ├── Flowers_01.fbx.meta
-│   │   │   ├── Mushrooms_01.fbx
-│   │   │   └── Mushrooms_01.fbx.meta
-│   │   └── Willows/
-│   │       ├── WillowBurgundy.fbx
-│   │       ├── WillowBurgundy.fbx.meta
-│   │       ├── WillowDeepGreen_01.fbx
-│   │       ├── WillowDeepGreen_01.fbx.meta
-│   │       ├── Willow_Gold.fbx
-│   │       └── Willow_Gold.fbx.meta
-│   ├── Scenes/
-│   │   ├── AmberRuinsLite.meta
-│   │   ├── AmberRuinsLite/
-│   │   │   ├── AmberRuinsLiteBoundaryFog.cs
-│   │   │   ├── AmberRuinsLiteDetail.cs
-│   │   │   ├── AmberRuinsLitePlayer.cs
-│   │   │   ├── Editor/
-│   │   │   │   ├── AmberRuinsLiteBuilder.cs
-│   │   │   │   └── AmberRuinsLitePlayerSetup.cs
-│   │   │   └── Textures/
-│   │   │       └── ForestFloor_Albedo.png
-│   │   ├── AmberRuinsLiteScenes.meta
-│   │   ├── AmberRuinsLiteScenes/
-│   │   │   └── Forest_20261011_010711_237de3a1162647a0aa9b5d033cfb6d76/
-│   │   │       ├── Materials/ (26 files)
-│   │   │       ├── Meshes/ (364 files)
-│   │   │       ├── Scenes/
-│   │   │       │   └── TheAmberRuins_Lite.unity
-│   │   │       └── Textures/ (6 files)
-│   │   ├── SampleScene.unity
-│   │   ├── SampleScene.unity.meta
-│   ├── Scripts/
-│   │   └── UI/
-│   │       └── StartScreenController.cs
-│   ├── Settings/
-│   │   ├── DefaultVolumeProfile.asset
-│   │   ├── DefaultVolumeProfile.asset.meta
-│   │   ├── Mobile_Renderer.asset
-│   │   ├── Mobile_Renderer.asset.meta
-│   │   ├── Mobile_RPAsset.asset
-│   │   ├── Mobile_RPAsset.asset.meta
-│   │   ├── PC_Renderer.asset
-│   │   ├── PC_Renderer.asset.meta
-│   │   ├── PC_RPAsset.asset
-│   │   ├── PC_RPAsset.asset.meta
-│   │   ├── SampleSceneProfile.asset
-│   │   ├── SampleSceneProfile.asset.meta
-│   │   ├── UniversalRenderPipelineGlobalSettings.asset
-│   │   └── UniversalRenderPipelineGlobalSettings.asset.meta
-│   ├── TutorialInfo/
-│   │   ├── Layout.wlt
-│   │   ├── Layout.wlt.meta
-│   │   ├── Readme.cs
-│   │   ├── Readme.cs.meta
-│   │   ├── Editor/
-│   │   │   ├── ReadmeEditor.cs
-│   │   │   └── ReadmeEditor.cs.meta
-│   │   ├── Icons/
-│   │   │   ├── URP.png
-│   │   │   └── URP.png.meta
-│   │   └── StyleSheets/
-│   │       ├── ReadmeEditor.uss
-│   │       ├── ReadmeEditor.uss.meta
-│   │       ├── ReadmeEditorDark.uss
-│   │       ├── ReadmeEditorDark.uss.meta
-│   │       ├── ReadmeEditorLight.uss
-│   │       └── ReadmeEditorLight.uss.meta
-│   ├── UI Toolkit/
-│   │   └── UnityThemes/
-│   │       └── UnityDefaultRuntimeTheme.tss
-│   └── UI/
-│       ├── Images/
-│       │   └── forest-background.gif
-│       ├── StartScreen.uss
-│       ├── StartScreen.uxml
-│       └── StartScreenPanelSettings.asset
-├── Packages/
-│   ├── manifest.json
-│   └── packages-lock.json
-├── ProjectSettings/
-│   ├── AudioManager.asset
-│   ├── ClusterInputManager.asset
-│   ├── DynamicsManager.asset
-│   ├── EditorBuildSettings.asset
-│   ├── EditorSettings.asset
-│   ├── GraphicsSettings.asset
-│   ├── InputManager.asset
-│   ├── MemorySettings.asset
-│   ├── MultiplayerManager.asset
-│   ├── NavMeshAreas.asset
-│   ├── PackageManagerSettings.asset
-│   ├── Physics2DSettings.asset
-│   ├── PhysicsCoreProjectSettings2D.asset
-│   ├── PresetManager.asset
-│   ├── ProjectAuditorSettings.asset
-│   ├── ProjectSettings.asset
-│   ├── ProjectVersion.txt
-│   ├── QualitySettings.asset
-│   ├── SceneTemplateSettings.json
-│   ├── ShaderGraphSettings.asset
-│   ├── TagManager.asset
-│   ├── TimeManager.asset
-│   ├── UnityConnectSettings.asset
-│   ├── URPProjectSettings.asset
-│   ├── VersionControlSettings.asset
-│   ├── VFXManager.asset
-│   ├── XRSettings.asset
-│   └── Packages/
-│       └── com.unity.ai.assistant/
-│           └── Settings.json
-```
