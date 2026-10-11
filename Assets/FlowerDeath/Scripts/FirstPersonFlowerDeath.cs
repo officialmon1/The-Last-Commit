@@ -252,16 +252,9 @@ public class FirstPersonFlowerDeath : MonoBehaviour
 
     void BuildWorld()
     {
+        // Only the ground: the level pillars (CodeTerminal objects in the scene) are the landmarks
         var ground = Lit(new Color(0.22f, 0.26f, 0.24f), 0.05f);
         Prim(PrimitiveType.Plane, ground, Vector3.zero, Vector3.one * 4f);   // 40m x 40m; its MeshCollider lets petals land on it
-        var stone = Lit(new Color(0.45f, 0.42f, 0.4f), 0.2f);
-        var rng = new System.Random(7);
-        for (int i = 0; i < 14; i++)
-        {
-            float a = (float)rng.NextDouble() * Mathf.PI * 2f, d = 3f + (float)rng.NextDouble() * 9f;
-            float h = 0.8f + (float)rng.NextDouble() * 2.5f;
-            Prim(PrimitiveType.Cube, stone, new Vector3(Mathf.Cos(a) * d, h * 0.5f, Mathf.Sin(a) * d), new Vector3(0.6f, h, 0.6f));
-        }
     }
 
     // ------------------------------------------------------------------ Body
