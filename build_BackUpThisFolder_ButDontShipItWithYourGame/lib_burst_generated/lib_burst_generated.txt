@@ -1,4 +1,4 @@
-Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+Library: /Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --platform=macOS
 --minimum-os-version=
 --backend=burst-llvm-21
@@ -8,11 +8,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+GreaterFloatJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+GreaterFloatJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--b53b08969ef0541040e868949ca03a12
@@ -49,11 +49,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+WindowedDFTMatrixOutRealImaJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+WindowedDFTMatrixOutRealImaJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--6409befb2e71e804502b1c7d322d2007
@@ -91,11 +91,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --target-framework=NetFramework
 --float-mode=Fast
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobForExtensions+ForJobStruct`1[[UnityEngine.Rendering.Universal.ZBinningJob, Unity.RenderPipelines.Universal.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(UnityEngine.Rendering.Universal.ZBinningJob&, Unity.RenderPipelines.Universal.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--77fc393cb521ac129b1392d4eb94d29a
@@ -117,11 +117,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Collections.xxHash3, Unity.Collections, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Hash64Long(System.Byte*, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.Byte*, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.Int64, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.Byte*, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--93df17b7366cd622dfa5ea2d3c75cf0b
@@ -158,11 +158,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobParallelForExtensions+ParallelForJobStruct`1[[Unity.InferenceEngine.BurstJobsCastTensor+Float16BytesAsFloatJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.BurstJobsCastTensor+Float16BytesAsFloatJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--555042b7a513cf04aa2b5b588bbf50d4
@@ -200,11 +200,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --target-framework=NetFramework
 --float-mode=Fast
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+RoiAlignJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+RoiAlignJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--d42ee2bc95898300bd4529a7ed8351c6
@@ -241,11 +241,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+PowIntIntJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+PowIntIntJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--cad9b066c2a26702953c79fbfa9d4f38
@@ -282,11 +282,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobParallelForExtensions+ParallelForJobStruct`1[[UnityEngine.Rendering.InstanceDataSystem+UpdateRendererInstancesJob, Unity.RenderPipelines.GPUDriven.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(UnityEngine.Rendering.InstanceDataSystem+UpdateRendererInstancesJob&, Unity.RenderPipelines.GPUDriven.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--629364e44aefad191e287c15b5f1415d
@@ -324,11 +324,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --target-framework=NetFramework
 --float-mode=Fast
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+ReduceL1FloatJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+ReduceL1FloatJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--16aafef1f92e652194bab3a69ed1be5d
@@ -365,11 +365,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=UnityEngine.Rendering.Universal.ShadowUtility, Unity.RenderPipelines.Universal.2D.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::CalculateShadowTriangles_FromTriangles(Unity.Collections.NativeArray`1[[Unity.Mathematics.float3, UnityEngine.MathematicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|Unity.Collections.NativeArray`1[[UnityEngine.Rendering.Universal.ShadowEdge, Unity.RenderPipelines.Universal.2D.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|Unity.Collections.NativeArray`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|Unity.Collections.NativeArray`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)--80dfe03e82411801fbe4c2453500d553
@@ -406,11 +406,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobForExtensions+ForJobStruct`1[[UnityEngine.Rendering.Universal.ReflectionProbeMinMaxZJob, Unity.RenderPipelines.Universal.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(UnityEngine.Rendering.Universal.ReflectionProbeMinMaxZJob&, Unity.RenderPipelines.Universal.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--fbc079948c97a98cd097eb9cc996cc4a
@@ -429,11 +429,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --target-framework=NetFramework
 --float-mode=Fast
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobParallelForExtensions+ParallelForJobStruct`1[[Unity.InferenceEngine.CPUBackend+GlobalAverageVariancePoolJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+GlobalAverageVariancePoolJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--910c73bd53072ad0ad2d61c12396dc96
@@ -446,11 +446,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+SliceJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+SliceJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--87ac054eab3ad21a989c5e56447f89db
@@ -487,11 +487,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+NegFloatJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+NegFloatJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--f69a6fefca2b7808df648225e9bd7ea8
@@ -528,11 +528,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.CPUBackend+ConvJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::CanUseDepthwiseConvKernel(Unity.InferenceEngine.CPUBackend+ConvJob*, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null)--39658a002cb60b47c1eee2ef5f799014
@@ -545,11 +545,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.InferenceEngine.IParallelForBatchExtensions+ParallelForBatchJobStruct`1[[Unity.InferenceEngine.CPUBackend+LogJob, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null]], Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null::Execute(Unity.InferenceEngine.CPUBackend+LogJob&, Unity.InferenceEngine, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--9d0db1f201f4f206753153e8c356e9ef
@@ -586,11 +586,11 @@ Library: /Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/bu
 --float-precision=Standard
 --target-framework=NetFramework
 --generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/Burst
+--temp-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/Burst
 --emit-version-symbol=True
 --key-folder=/Applications/Unity/Hub/Editor/6000.6.5f1/PlaybackEngines/MacStandaloneSupport
---decode-folder=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Library/Burst
---output=/Users/zaramaraj/Desktop/unity-test/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
+--decode-folder=/Users/zaramaraj/Desktop/The-Last-Commit/Library/Burst
+--output=/Users/zaramaraj/Desktop/The-Last-Commit/Temp/BurstOutput/build.app/Contents/Plugins/lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=Unity.Jobs.IJobParallelForExtensions+ParallelForJobStruct`1[[UnityEngine.Rendering.DrawCommandOutputPerBatch, Unity.RenderPipelines.GPUDriven.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(UnityEngine.Rendering.DrawCommandOutputPerBatch&, Unity.RenderPipelines.GPUDriven.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)--f531652faf1e45081f68869b8a72d6da
