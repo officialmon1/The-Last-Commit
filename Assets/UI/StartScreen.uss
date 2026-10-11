@@ -20,7 +20,9 @@
     top: 0;
     bottom: 0;
 
+    /* GameStart plays Resources/Videos/forest-background into this layer at runtime (UI Toolkit cannot use an mp4 as a background-image) */
     background-color: rgba(0, 0, 0, 0);
+    -unity-background-scale-mode: scale-and-crop;
 }
 
 .background-shade {
@@ -31,7 +33,7 @@
     top: 0;
     bottom: 0;
 
-    background-color: rgba(15, 13, 18, 0.4);
+    background-color: rgba(15, 13, 18, 0.28);
 }
 
 /* The C# controller centers and scales this container. */
