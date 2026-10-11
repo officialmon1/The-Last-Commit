@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
+using UnityEngine.Video;
 
 /// <summary>
 /// Outermost game state. The player can walk around from the first frame, but the level pillars (every CodeTerminal in the scene)
@@ -22,6 +24,8 @@ public class GameStart : MonoBehaviour
     public Canvas[] hideUntilStart = Array.Empty<Canvas>();
 
     [Header("Start menu backdrop")]
+    [Tooltip("Video looped behind the start menu (Resources path, no extension): drawn into the start screen's 'forest-background' layer. Empty or missing -> the sky camera below is used instead.")]
+    public string menuVideo = "Videos/forest-background";
     [Tooltip("While a start menu is up (useStartKey off): look down on the forest from a camera slowly circling above the player's clearing, instead of the player's view.")]
     public bool skyViewWhileWaiting = true;
     public float skyHeight = 18f;
@@ -31,6 +35,9 @@ public class GameStart : MonoBehaviour
     Camera _skyCam;
     Transform _skyTarget;
     float _skyAngle;
+    VideoPlayer _menuPlayer;
+    RenderTexture _menuVideoTexture;
+    VisualElement _menuVideoTarget;
 
     CodeTerminal[] _pillars = Array.Empty<CodeTerminal>();
     GUIStyle _style;
@@ -46,8 +53,37 @@ public class GameStart : MonoBehaviour
 
     void Start()
     {
-        // after every Awake: the player's camera is parented and the portal exists by now
-        if (!Started && !useStartKey && skyViewWhileWaiting) CreateSkyCamera();
+        // after every Awake: the start screen's visual tree, the player's camera and the portal exist by now
+        if (Started || useStartKey) return;
+        if (!CreateMenuVideo() && skyViewWhileWaiting) CreateSkyCamera();
+    }
+
+    /// <summary>Loops the menu video into the start screen's background layer. False when there is no clip or no start screen.</summary>
+    bool CreateMenuVideo()
+    {
+        var clip = string.IsNullOrEmpty(menuVideo) ? null : Resources.Load<VideoClip>(menuVideo);
+        var doc = FindAnyObjectByType<UIDocument>();
+        _menuVideoTarget = doc != null && doc.rootVisualElement != null ? doc.rootVisualElement.Q(className: "forest-background") : null;
+        if (clip == null || _menuVideoTarget == null) return false;
+        _menuVideoTexture = new RenderTexture((int)clip.width, (int)clip.height, 0);
+        var go = new GameObject("Menu video");
+        _menuPlayer = go.AddComponent<VideoPlayer>();
+        _menuPlayer.playOnAwake = false;
+        _menuPlayer.clip = clip;
+        _menuPlayer.isLooping = true;
+        _menuPlayer.audioOutputMode = VideoAudioOutputMode.None;   // a silent backdrop
+        _menuPlayer.renderMode = VideoRenderMode.RenderTexture;
+        _menuPlayer.targetTexture = _menuVideoTexture;
+        _menuPlayer.Play();
+        _menuVideoTarget.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_menuVideoTexture));   // .uss scales and crops it
+        return true;
+    }
+
+    void DestroyMenuVideo()
+    {
+        if (_menuVideoTarget != null) { _menuVideoTarget.style.backgroundImage = new StyleBackground(StyleKeyword.Null); _menuVideoTarget = null; }
+        if (_menuPlayer != null) { Destroy(_menuPlayer.gameObject); _menuPlayer = null; }
+        if (_menuVideoTexture != null) { _menuVideoTexture.Release(); Destroy(_menuVideoTexture); _menuVideoTexture = null; }
     }
 
     void Update()
@@ -94,12 +130,13 @@ public class GameStart : MonoBehaviour
         if (Started) return;
         Started = true;
         if (_skyCam != null) { Destroy(_skyCam.gameObject); _skyCam = null; }
+        DestroyMenuVideo();
         foreach (var p in _pillars) if (p != null) p.gameObject.SetActive(true);
         foreach (var c in hideUntilStart) if (c != null) c.enabled = true;
         if (!CodeEditorUI.IsOpen)
         {
-            Cursor.lockState = CursorLockMode.Locked;   // straight into first-person look, no extra click needed
-            Cursor.visible = false;
+            UnityEngine.Cursor.lockState = CursorLockMode.Locked;   // straight into first-person look, no extra click needed
+            UnityEngine.Cursor.visible = false;
         }
         GameStarted?.Invoke();
     }
