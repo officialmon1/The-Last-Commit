@@ -117,11 +117,11 @@
 
                 <ui:VisualElement class="instruction">
                     <ui:Label
-                        text="Ask the panda"
+                        text="Ask BaoBao"
                         class="instruction-title"
                     />
                     <ui:Label
-                        text="When you are stuck, ask for a hint. The panda guides you without giving away the answer."
+                        text="When you are stuck, ask BaoBao the panda for a hint. BaoBao guides you without giving away the answer."
                         class="instruction-text"
                     />
                 </ui:VisualElement>
@@ -184,7 +184,7 @@
                     />
 
                     <ui:Label
-                        text="— The Panda"
+                        text="— BaoBao"
                         class="quote-credit"
                     />
                 </ui:VisualElement>
@@ -195,7 +195,7 @@
                 />
 
                 <ui:Label
-                    text="Your webcam turns on when the escape begins: the panda reads your expression to know when to offer help. Nothing is recorded or uploaded. Pressing Begin Escape means you are okay with that."
+                    text="Your webcam turns on when the escape begins: BaoBao the panda reads your expression to know when to offer help. Nothing is recorded or uploaded. Pressing Begin Escape means you are okay with that."
                     class="consent-note"
                 />
 

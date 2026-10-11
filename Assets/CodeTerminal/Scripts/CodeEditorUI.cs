@@ -59,7 +59,6 @@ public class CodeEditorUI : MonoBehaviour
     public int trackTimeLimitSeconds = 36 * 60;
     [Tooltip("Font size on a 1080p screen; other resolutions scale by screen height (Retina and other high-DPI screens scale up automatically)")] public int fontSize = 18;
     [Tooltip("Extra overall scale (1 = none)")] public float uiScale = 1f;
-    [Tooltip("Debug: press this key to use up the timer immediately (to preview the death sequence)")] public Key debugTimeUpKey = Key.F9;
 
     GameObject _root, _refRoot, _refBar, _choiceRoot, _hintsRoot;
     Text _title, _timerLabel, _problemText, _output, _status, _refTitle, _choiceBanner, _choiceText, _hintsTitle, _hintsText;
@@ -481,7 +480,6 @@ public class CodeEditorUI : MonoBehaviour
     void TickRun()
     {
         if (!_runStarted || _runCompleted || _pendingSave != null) return;   // paused only while the Continue / New game choice is pending
-        if (Keyboard.current != null && Keyboard.current[debugTimeUpKey].wasPressedThisFrame) _runElapsed = trackTimeLimitSeconds;
         if (TimeUp)
         {
             if (_timeUpFired) return;
@@ -543,10 +541,10 @@ public class CodeEditorUI : MonoBehaviour
     void RefreshHints()
     {
         var hints = CurrentHints;
-        _hintsTitle.text = $"Panda's hints   {hints.Count}/{MaxHints}";
+        _hintsTitle.text = $"BaoBao's hints   {hints.Count}/{MaxHints}";
         if (hints.Count == 0)
         {
-            _hintsText.text = "No hints yet for this level. Click \"Ask Panda for a Hint\" (up to " + MaxHints + " per level); every hint stays listed here.";
+            _hintsText.text = "No hints yet for this level. Click \"Ask BaoBao for a Hint\" (up to " + MaxHints + " per level); every hint stays listed here.";
             return;
         }
         var sb = new System.Text.StringBuilder();
@@ -655,7 +653,7 @@ public class CodeEditorUI : MonoBehaviour
         if (_problem == null || _running || PythonRunner.PythonPath == null) { onDone(false, _lastTestResults); return; }
         var problem = _problem;
         _running = true;
-        _status.text = "Panda is checking your code...";
+        _status.text = "BaoBao is checking your code...";
         var r = await PythonRunner.RunAsync(_code.text, problem.stdin, Mathf.Max(1, problem.run_timeout_seconds));
         if (this == null) return;
         _running = false;
@@ -767,7 +765,7 @@ public class CodeEditorUI : MonoBehaviour
         var bar = Row("Bar", panel.transform, fontSize * 2);
         _runBtn = MakeButton("Run", bar, "Run (Ctrl+Enter)", () => RunCode(false), ForestAccentRun);
         _submitBtn = MakeButton("Submit", bar, "Submit", () => RunCode(true), ForestAccentSubmit);
-        var hintBtn = MakeButton("PandaHint", bar, "Ask Panda for a Hint", () =>
+        var hintBtn = MakeButton("PandaHint", bar, "Ask BaoBao for a Hint", () =>
         {
             if (PandaCompanion.Instance != null) PandaCompanion.Instance.OnClicked();
         }, ForestAccentHint);

@@ -47,6 +47,9 @@ namespace Panda
 
         [Header("UI")]
         public SpeechBubble speechBubble;
+        [Tooltip("Small name floating just above the head; empty = no tag.")] public string displayName = "BaoBao";
+        [Tooltip("Height of the name tag's letters in metres.")] public float nameTagSize = 0.06f;
+        TextMesh _nameTag;
 
         // The model's own mesh was authored lying flat (Z-up export); this constant local
         // correction stands it upright. Compose it with every look-direction rotation below,
@@ -77,6 +80,7 @@ namespace Panda
         void Start()
         {
             FitModel();
+            CreateNameTag();
             _basePos = transform.position;
             _groundPos = transform.position;
             if (followTarget == null)
@@ -98,12 +102,13 @@ namespace Panda
                 PandaService.Instance.OnStatusUpdated += HandleStatus;
                 PandaService.Instance.OnBackendReady += HandleBackendReady;
                 PandaService.Instance.OnBackendFailed += HandleBackendFailed;
-                if (!PandaService.Instance.BackendReady) speechBubble.ShowText("Panda is loading...");
+                if (!PandaService.Instance.BackendReady) speechBubble.ShowText("BaoBao is loading...");
             }
         }
 
         void OnDestroy()
         {
+            if (_nameTag != null) Destroy(_nameTag.gameObject);
             if (PandaService.Instance != null)
             {
                 PandaService.Instance.OnStatusUpdated -= HandleStatus;
@@ -121,7 +126,33 @@ namespace Panda
         void HandleBackendFailed(string error)
         {
             _backendFailed = true;
-            speechBubble.ShowText("Panda couldn't connect. Reopen the game to try again.");
+            speechBubble.ShowText("BaoBao couldn't connect. Reopen the game to try again.");
+        }
+
+        void LateUpdate()
+        {
+            // after the bob/walk of Update: sit just above the head and face the camera (the bubble starts headGap higher)
+            if (_nameTag == null) return;
+            var cam = Camera.main;
+            if (cam == null) return;
+            _nameTag.transform.position = HeadTop + Vector3.up * nameTagSize * 1.5f;
+            var d = _nameTag.transform.position - cam.transform.position;
+            if (d.sqrMagnitude > 0.001f) _nameTag.transform.rotation = Quaternion.LookRotation(d);   // a TextMesh reads correctly when its forward points away from the viewer
+        }
+
+        void CreateNameTag()
+        {
+            if (string.IsNullOrWhiteSpace(displayName)) return;
+            var go = new GameObject("NameTag", typeof(TextMesh));   // a root object: it must not inherit the model's fitted scale or Z-up fix
+            _nameTag = go.GetComponent<TextMesh>();
+            _nameTag.text = displayName;
+            _nameTag.font = ForestTheme.ElegantFont() ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _nameTag.fontSize = 64;
+            _nameTag.characterSize = nameTagSize * 10f / 64f;   // TextMesh letter height ~= fontSize * characterSize / 10
+            _nameTag.anchor = TextAnchor.LowerCenter;
+            _nameTag.alignment = TextAlignment.Center;
+            _nameTag.color = ForestTheme.TextCream;
+            go.GetComponent<MeshRenderer>().sharedMaterial = _nameTag.font.material;
         }
 
         void Update()
@@ -331,7 +362,7 @@ namespace Panda
         {
             if (service == null || !service.BackendReady)
             {
-                Say(service == null || _backendFailed ? "Panda couldn't connect. Reopen the game to try again." : "Panda is loading...");
+                Say(service == null || _backendFailed ? "BaoBao couldn't connect. Reopen the game to try again." : "BaoBao is loading...");
                 return;
             }
             int used = editor != null ? editor.CurrentHints.Count : 0;

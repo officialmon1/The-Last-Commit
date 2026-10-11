@@ -4,13 +4,13 @@ using UnityEngine.InputSystem;
 using Panda;
 
 /// <summary>
-/// First-person petal-death demo: press the death key -> raise both hands -> watch them turn into petals ->
+/// First-person petal death when the 36-minute clock runs out: raise both hands -> watch them turn into petals ->
 /// the dissolve spreads from the hands along the arms to the whole body, the view drops to watch torso and legs go -> knees buckle, camera sinks -> fade to black.
 ///
 /// Scene, ground, hands and body are all built from primitives at runtime (no external model assets).
 /// To swap in a real rigged model: parent it under Player, attach the camera to the head bone, hide the head,
 /// then set FlowerDissolve.target = Player and dissolveOrigin = the midpoint between the hands; the dissolve/petal logic needs no change.
-/// K = die   R = revive   mouse = look   Esc = release cursor
+/// Once the player is gone the game-over screen (GameEnd) offers Start over, which reloads the scene with a fresh save.
 /// </summary>
 public class FirstPersonFlowerDeath : MonoBehaviour
 {
@@ -28,7 +28,6 @@ public class FirstPersonFlowerDeath : MonoBehaviour
     Transform _player, _hands, _handsCenter;
     Transform[] _shoulders = new Transform[2], _elbows = new Transform[2], _upperArms = new Transform[2];
     FlowerDissolve _dissolve;
-    string _status;
     float _yaw, _pitch, _fade;
     bool _dead;
     float _trembleWeight;
@@ -87,10 +86,9 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         _dissolve.heightWeight = 0.72f;
         _dissolve.edgeWidth = 0.03f;
         _dissolve.wind = new Vector3(0.9f, 0.3f, 0.6f);
-        _dissolve.DissolveFinished += () => _status = "Gone. Press R to revive";
+        _dissolve.DissolveFinished += () => { _fade = 0f; GameEnd.Ensure().ShowDeath(); };   // the end screen brings its own backdrop
 
-        _status = "K: die   R: revive";
-        CodeEditorUI.TrackTimeUp += OnTrackTimeUp;   // 36 minutes used up -> die
+        CodeEditorUI.TrackTimeUp += OnTrackTimeUp;   // 36 minutes used up -> die (the only way to die)
     }
 
     void OnDestroy() => CodeEditorUI.TrackTimeUp -= OnTrackTimeUp;
@@ -105,12 +103,6 @@ public class FirstPersonFlowerDeath : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb != null && !CodeEditorUI.IsOpen)
-        {
-            if (kb.kKey.wasPressedThisFrame && !_dead) StartCoroutine(Die());
-            if (kb.rKey.wasPressedThisFrame) Revive();
-        }
-
         if (_fpc != null)
         {
             // the movement controller owns the view; during the death sequence we drive its pitch from here
@@ -157,7 +149,6 @@ public class FirstPersonFlowerDeath : MonoBehaviour
     IEnumerator Die()
     {
         _dead = true;
-        _status = "...";
         if (_fpc != null) { _fpc.inputLocked = true; _pitch = _fpc.Pitch; }
         // 1) raise the hands in front of the eyes
         float t = 0f;
@@ -184,7 +175,6 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         }
         // 3) dissolve: hands -> arms -> body. Once the hands are gone look down at the body, then knees buckle, camera sinks, fade to black
         _dissolve.Play();
-        _status = "Dissolving...";
         float D = _dissolve.duration;
         t = 0f;
         while (_dissolve.IsPlaying)
@@ -198,36 +188,15 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             _fade = Mathf.InverseLerp(0.78f, 1f, k);
             yield return null;
         }
-        _trembleWeight = 0f;
-        _fade = 1f;
-    }
-
-    void Revive()
-    {
-        StopAllCoroutines();
-        _dissolve.ResetDissolve();
-        _dead = false;
-        _trembleWeight = 0f;
-        _fade = 0f;
-        _hands.localPosition = RestPos + _lastBreathe;
-        _baseRot = RestRot;
-        _cam.transform.localPosition = _eyePos;
-        _pitch = 4f;
-        if (_fpc != null) { _fpc.Pitch = _pitch; _fpc.inputLocked = false; }
-        _status = "K: die   R: revive";
-        if (CodeEditorUI.Instance != null) CodeEditorUI.Instance.RestartRun();   // revive = a fresh full time budget
+        _trembleWeight = 0f;   // already faded to black; DissolveFinished has handed over to the game-over screen
     }
 
     void OnGUI()
     {
-        if (_fade > 0f)
-        {
-            GUI.color = new Color(0f, 0f, 0f, _fade);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-        }
-        float k = CodeEditorUI.ScaleFor(Screen.height);   // scale up on high-DPI (Retina) screens
-        GUI.Label(new Rect(16 * k, 12 * k, 600 * k, 30 * k), _status, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(20 * k), font = ForestTheme.ElegantFont(), normal = { textColor = ForestTheme.TextCream } });
+        if (_fade <= 0f) return;
+        GUI.color = new Color(0f, 0f, 0f, _fade);
+        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = Color.white;
     }
 
     // ------------------------------------------------------------------ Scene setup
