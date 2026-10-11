@@ -94,15 +94,15 @@ public class CodeTerminal : MonoBehaviour
         }
     }
 
+    const float MinPillarDistance = 1.2f;   // the panda waits off to the side now, so only keep the camera from being pressed against the pillar
+
     /// <summary>
-    /// Panda waits at a fixed depth in front of the camera once the editor opens (PandaCompanion.editorWaitDepth).
-    /// If the player pressed E while standing closer to this pillar than that, the pillar itself would sit between
-    /// the camera and Panda's spot and hide her behind it. Step the player back before the editor opens -- using
-    /// CharacterController.Move so it respects collisions and can't push them through a wall behind them.
+    /// If the player pressed E with their face against the pillar, step them back a little before the editor opens
+    /// (CharacterController.Move respects collisions and can't push them through a wall behind them).
     /// </summary>
     void BackAwayIfTooClose(float hitDistance, Transform cam)
     {
-        float minDistance = (PandaCompanion.Instance != null ? PandaCompanion.Instance.editorWaitDepth : 2.3f) + 0.3f;
+        float minDistance = MinPillarDistance;
         float shortfall = minDistance - hitDistance;
         if (shortfall <= 0f) return;
         var cc = cam.GetComponentInParent<CharacterController>();

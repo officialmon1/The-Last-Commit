@@ -31,15 +31,12 @@ namespace Panda
         [Tooltip("Rescale the model so it is this tall (metres). 0 = keep the model's own size.")]
         public float targetHeight = 1.1f;
 
-        [Header("Terminal wait spot (pinned to a fixed spot on screen)")]
-        [Tooltip("Where across the screen (0 = left edge, 1 = right edge) the panda's feet sit.")]
-        public float editorWaitViewportX = 0.22f;
-        [Tooltip("Where up the screen (0 = bottom edge, 1 = top edge) the panda's feet sit. Slightly negative parks it low in the corner with its legs off screen.")]
-        public float editorWaitViewportY = -0.1f;
-        [Tooltip("How far in front of the camera (metres) that spot sits. Keep this closer than terminals are " +
-                 "ever stood next to, so the panda is never hidden behind one -- bring it closer (and it'll " +
-                 "happily overlap the terminal) rather than push it back and risk it vanishing behind geometry.")]
-        public float editorWaitDepth = 2.3f;
+        [Header("Terminal wait spot (on the ground, bottom-left of the view)")]
+        [Tooltip("While the code editor is open the panda stands on the ground this many metres ahead of the camera " +
+                 "(along its horizontal line of sight). Far enough that its feet are on screen with a level camera.")]
+        public float editorWaitDepth = 3.2f;
+        [Tooltip("...and this many metres to the side of that line (negative = left). Keep it on the left: the editor covers the right half of the screen.")]
+        public float editorWaitSide = -2.4f;
 
         [Header("Movement")]
         public float patrolDistance = 1.5f;
@@ -58,7 +55,11 @@ namespace Panda
         Vector3 _basePos;
         Vector3 _groundPos;
         float _feetOffset; // how far the pivot sits above the model's feet
+        float _height = 1.1f; // model height after FitModel
         bool _walking;
+
+        /// <summary>World point at the top of the panda's head without the walking bob: a steady anchor for the speech bubble.</summary>
+        public Vector3 HeadTop => (followTarget != null ? _groundPos : transform.position - Vector3.up * _feetOffset) + Vector3.up * _height;
         Quaternion _idleFacing;   // where the panda turned to when it stopped (toward the player at that moment); it does not track the player afterwards
         long _currentOfferId = -1;
         long _handledId = 0;
@@ -153,20 +154,21 @@ namespace Panda
         }
 
         /// <summary>
-        /// Where the panda waits while the code editor is open. Projecting a fixed viewport point into world
-        /// space (rather than offsetting from the camera's position along its own axes) is what actually makes
-        /// this appear in the same place on screen every time: a pure position+direction offset still shifts on
-        /// screen with the camera's pitch (looking down at the terminal vs. level), because the projection back
-        /// onto the screen depends on the camera's current rotation, not just where the point sits in the world.
-        /// Viewport coordinates compensate for that by construction. No ground raycast either -- that was
-        /// picking up whatever happened to be nearby (the terminal's own collider, a wall) and is exactly what
-        /// made this drift between different terminals.
+        /// Where the panda waits while the code editor is open: on the ground, ahead-left of the camera's horizontal line
+        /// of sight. (A point projected from the screen instead sank it into the floor whenever the player looked down.)
         /// </summary>
         Vector3 EditorWaitSpot()
         {
             var cam = Camera.main;
             if (cam == null) return FollowSpot();
-            return cam.ViewportToWorldPoint(new Vector3(editorWaitViewportX, editorWaitViewportY, editorWaitDepth));
+            Vector3 fwd = cam.transform.forward; fwd.y = 0f;
+            if (fwd.sqrMagnitude < 0.0001f) { fwd = followTarget.forward; fwd.y = 0f; }
+            if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
+            fwd.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, fwd);
+            Vector3 spot = cam.transform.position + fwd * editorWaitDepth + right * editorWaitSide;
+            spot.y = followTarget.position.y;
+            return GroundSnap(spot);
         }
 
         /// <summary>Drops a world point onto whatever's below it (ignoring the player and the panda itself).</summary>
@@ -263,6 +265,7 @@ namespace Panda
 
             // some exports have the pivot in the middle of the body; lift the panda so its feet touch the ground
             _feetOffset = transform.position.y - b.min.y;
+            _height = b.size.y;
 
             var box = GetComponent<BoxCollider>();
             if (box != null)
