@@ -19,7 +19,7 @@
     top: 0;
     bottom: 0;
 
-    background-image: url("Images/forest-background.mp4");
+    background-image: url("Videos/forest-background.mp4");
     -unity-background-scale-mode: scale-and-crop;
 }
 
