@@ -1835,6 +1835,9 @@ MonoBehaviour:
   button1Label: {fileID: 1541343767}
   button2: {fileID: 477898524}
   button2Label: {fileID: 1207363659}
+  anchor: {fileID: 0}
+  headGap: 0.25
+  screenMargin: 16
 --- !u!224 &1062211883
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3566,27 +3569,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 2920797235519065878, guid: ca2e0045d2a464eb793a0d639b96dd88, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
