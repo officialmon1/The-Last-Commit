@@ -7,6 +7,9 @@ namespace Panda
     /// Lives on the 3D panda. Waits beside the player and, once they walk out of its circle, runs ahead
     /// to lead the way (or patrols side to side if there is no player); reacts to the backend's live face/hand read of the player (mirrors the
     /// HELP_* / PROGRESS offers from the web prototype), and asks the backend for a hint when clicked.
+    /// Those reactions and hints only happen while a code terminal is open. Out in the forest BaoBao makes small talk
+    /// instead (a fresh line every so often), congratulates the player when they leave a solved terminal, and warns them
+    /// when they wander too close to the edge of the ground.
     /// Before hinting it judges the code quietly: a solution that already passes gets "go submit"
     /// instead of a hint. Hint history is kept per level by CodeEditorUI (shown in its hints panel,
     /// saved locally), up to CodeEditorUI.MaxHints.
@@ -47,6 +50,10 @@ namespace Panda
 
         [Header("UI")]
         public SpeechBubble speechBubble;
+        [Tooltip("Seconds between two small-talk lines while no terminal is open (a random value in this range).")]
+        public Vector2 chatterInterval = new Vector2(20f, 35f);
+        [Tooltip("Warn when the player is within this many metres of the edge of the ground (the 'TERRAIN |' mesh). 0 = never.")]
+        public float edgeMargin = 12f;
         [Tooltip("Small name floating just above the head; empty = no tag.")] public string displayName = "BaoBao";
         [Tooltip("Height of the name tag's letters in metres.")] public float nameTagSize = 0.06f;
         TextMesh _nameTag;
@@ -71,6 +78,38 @@ namespace Panda
         bool _backendFailed;
         int _sessionVersion;
         float _holdBubbleUntil;   // a fresh hint stays in the bubble until this time before face reactions may replace it
+
+        // Small talk while the terminal is closed. Hints and face reactions are for the terminal only.
+        static readonly string[] SmallTalk =
+        {
+            "I'm BaoBao. I live here, mostly eating bamboo and watching travellers try to leave.",
+            "The broken pillars are the locks. Every one you open loosens the gate a little.",
+            "Take the path at your own pace, but not too slowly. The forest keeps the time.",
+            "I've watched a lot of travellers in here. You look like one of the clever ones.",
+            "Out here I just talk. Step up to a pillar and press E, and I can help with the code.",
+            "Don't mind the glowing bits in the trees. They've always done that.",
+            "Which pillar next? I'd pick whichever one is closest.",
+            "The gate at the far end of the clearing only opens once every lock is undone.",
+            "I'd offer you some bamboo, but you look like you'd rather have the way out.",
+            "A short walk clears the head before a hard problem. That's a panda tip, it's free.",
+            "Everything in here was built by someone who forgot how to leave. Don't be that someone.",
+            "If you hear the trees creak, that's just them talking about you. Mostly nice things.",
+        };
+        static readonly string[] AfterLevel =
+        {
+            "That lock is open! Catch your breath, then find the next pillar.",
+            "Nicely done. One more down, and the forest already feels a little lighter.",
+            "Solved and sealed. Whenever you're ready, the next pillar is waiting.",
+            "Good work back there. On to the next one when you're ready.",
+        };
+        const string AllClearedLine = "Every lock is open. The gate at the far end of the clearing is waiting for you.";
+        const string EdgeLine = "Careful, that's the edge of the forest. There's nothing out there but mist. Turn back.";
+
+        bool _editorWasOpen, _allCleared, _quiet;
+        int _passedAtOpen, _lastLine = -1;
+        float _nextChatter, _edgeWarnedUntil;
+        Bounds _ground;
+        bool _hasGround;
 
         void Awake()
         {
@@ -104,10 +143,17 @@ namespace Panda
                 PandaService.Instance.OnBackendFailed += HandleBackendFailed;
                 if (!PandaService.Instance.BackendReady) speechBubble.ShowText("BaoBao is loading...");
             }
+            CodeEditorUI.TrackCompleted += HandleTrackCompleted;
+            CodeEditorUI.TrackTimeUp += HandleTrackTimeUp;
+            _nextChatter = Time.unscaledTime + 4f;
+            foreach (var r in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+                if (r.name.StartsWith("TERRAIN |")) { _ground = r.bounds; _hasGround = true; break; }   // the walkable ground of the Amber Ruins scene
         }
 
         void OnDestroy()
         {
+            CodeEditorUI.TrackCompleted -= HandleTrackCompleted;
+            CodeEditorUI.TrackTimeUp -= HandleTrackTimeUp;
             if (_nameTag != null) Destroy(_nameTag.gameObject);
             if (PandaService.Instance != null)
             {
@@ -120,7 +166,66 @@ namespace Panda
         void HandleBackendReady()
         {
             _backendFailed = false;
+            if (!CodeEditorUI.IsOpen) { SayIdle(Pick(SmallTalk)); return; }   // out in the forest: small talk, not "stuck?"
             if (!_hinting && (CodeEditorUI.Instance == null || CodeEditorUI.Instance.CurrentHints.Count == 0)) speechBubble.Clear();
+        }
+
+        void HandleTrackCompleted(string track) => _allCleared = true;
+        void HandleTrackTimeUp(string track) => _quiet = true;   // the petals take over from here
+
+        /// <summary>
+        /// Everything BaoBao says while no terminal is open: a line when the player comes out of a terminal
+        /// (praise if that level is now solved), small talk every chatterInterval seconds, and the edge warning.
+        /// </summary>
+        void Chatter()
+        {
+            if (speechBubble == null || _quiet || GameEnd.IsShown) return;
+            if (GameStart.Instance != null && !GameStart.Started) return;   // the bubble is hidden behind the start menu anyway
+            bool open = CodeEditorUI.IsOpen;
+            var editor = CodeEditorUI.Instance;
+            if (open != _editorWasOpen)
+            {
+                _editorWasOpen = open;
+                if (open) { _passedAtOpen = -1; return; }
+                if (_allCleared) SayIdle(AllClearedLine);
+                else if (editor != null && _passedAtOpen >= 0 && editor.PassedCount > _passedAtOpen) SayIdle(Pick(AfterLevel));
+                else SayIdle(Pick(SmallTalk));
+                return;
+            }
+            if (open)
+            {
+                // inside the terminal the bubble belongs to the hints and the face reactions; the solved-count baseline is taken
+                // once the level is really showing (after the Continue / New game choice), before anything can be solved
+                if (_passedAtOpen < 0 && editor != null && !string.IsNullOrEmpty(editor.CurrentProblemText)) _passedAtOpen = editor.PassedCount;
+                return;
+            }
+            if (_hasGround && edgeMargin > 0f && followTarget != null)
+            {
+                var safe = _ground;
+                safe.Expand(-edgeMargin * 2f);   // the ground minus the margin on every side
+                Vector3 p = followTarget.position; p.y = safe.center.y;
+                if (!safe.Contains(p))
+                {
+                    if (Time.unscaledTime >= _edgeWarnedUntil) { SayIdle(EdgeLine); _edgeWarnedUntil = Time.unscaledTime + 12f; }
+                    return;
+                }
+            }
+            if (Time.unscaledTime >= _nextChatter) SayIdle(Pick(SmallTalk));
+        }
+
+        void SayIdle(string text)
+        {
+            speechBubble.ShowText(text);
+            _nextChatter = Time.unscaledTime + Random.Range(chatterInterval.x, chatterInterval.y);
+        }
+
+        string Pick(string[] lines)
+        {
+            if (lines.Length < 2) return lines[0];
+            int i;
+            do i = Random.Range(0, lines.Length); while (i == _lastLine);   // never the same line twice in a row
+            _lastLine = i;
+            return lines[i];
         }
 
         void HandleBackendFailed(string error)
@@ -157,6 +262,7 @@ namespace Panda
 
         void Update()
         {
+            Chatter();
             if (followTarget != null) { Follow(); return; }
 
             float x = Mathf.Sin(Time.time * patrolSpeed) * patrolDistance;

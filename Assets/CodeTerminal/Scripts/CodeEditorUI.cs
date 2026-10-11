@@ -138,6 +138,8 @@ public class CodeEditorUI : MonoBehaviour
     bool TimeUp => _runStarted && SecondsLeft <= 0f;
     bool AllPassed => _problems.Count > 0 && _problems.TrueForAll(p => _passed.Contains(p.slug));
     /// <summary>Whether level <paramref name="stage"/> (0-based) of a track is accepted (false until that track has been opened once).</summary>
+    /// <summary>How many levels of the current track are solved (0 before the run starts).</summary>
+    public int PassedCount => _runStarted ? _passed.Count : 0;
     public bool IsPassed(string track, int stage) => _runStarted && track == _track && stage >= 0 && stage < _problems.Count && _passed.Contains(_problems[stage].slug);
 
     public int PrerequisitesPassed(string track)
