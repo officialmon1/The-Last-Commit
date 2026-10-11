@@ -222,7 +222,12 @@ public class FirstPersonFlowerDeath : MonoBehaviour
 
     void BuildWorld()
     {
-        // Only the ground: the level pillars (CodeTerminal objects in the scene) are the landmarks
+        // Only a ground plane, and only when the scene has no ground of its own: under the Amber Ruins terrain the flat
+        // plane at y = 0 pokes through every dip in the hills as a dark slab. The level pillars are the landmarks.
+        var fpc = FindAnyObjectByType<FirstPersonController>();
+        Vector3 probe = (fpc != null ? fpc.transform.position : transform.position) + Vector3.up * 50f;
+        foreach (var hit in Physics.RaycastAll(probe, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore))
+            if (fpc == null || !hit.transform.IsChildOf(fpc.transform)) return;   // something to stand on already exists
         var ground = Lit(new Color(0.22f, 0.26f, 0.24f), 0.05f);
         Prim(PrimitiveType.Plane, ground, Vector3.zero, Vector3.one * 4f);   // 40m x 40m; its MeshCollider lets petals land on it
     }
