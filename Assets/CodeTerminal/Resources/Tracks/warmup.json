@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "stage": 1,
+      "slug": "a-plus-b",
+      "title": "A + B",
+      "description": "Read two integers a and b from standard input (separated by a space) and print their sum.",
+      "stdin": "17 25\n",
+      "expected_output": "42\n",
+      "starter_code": "",
+      "sample_input": "3 5\n",
+      "sample_output": "8\n",
+      "run_timeout_seconds": 5
+    }
+  ]
+}

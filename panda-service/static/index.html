@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Panda AI</title>
+<style>
+  body { margin:0; padding-top:176px; font-family:system-ui,sans-serif; background:#10201a; color:#e8f3ec; overflow-x:hidden; }
+  .wrap { display:flex; gap:24px; padding:12px 24px 24px; height:calc(100vh - 176px); box-sizing:border-box; }
+  .left { flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; overflow-y:auto; }
+  .right { width:300px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;
+           gap:10px; overflow-y:auto; box-sizing:border-box; }
+  label { font-size:13px; opacity:.8; }
+  textarea { width:100%; box-sizing:border-box; background:#0b1612; color:#e8f3ec; border:1px solid #2f5545;
+             border-radius:8px; padding:10px; font-size:14px; resize:none; }
+  #problem { flex:1; min-height:70px; }
+  #code { flex:2; min-height:120px; font-family:Consolas,Menlo,monospace; }
+  #tests { height:60px; flex:none; }
+  button { font-family:inherit; }
+  .note { font-size:11px; opacity:.6; }
+
+  /* ---- camera: fixed at the top center of the screen, near the real webcam ---- */
+  #camPanel { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:40;
+              width:min(400px, calc(100vw - 24px)); box-sizing:border-box;
+              background:#0b1612; border:1px solid #2f5545; border-radius:14px; padding:10px;
+              display:flex; flex-direction:row; gap:12px; align-items:center;
+              box-shadow:0 8px 20px rgba(0,0,0,.4); }
+  #camwrap { position:relative; width:150px; height:112px; flex:none; border:2px solid #2f5545; border-radius:10px;
+             overflow:hidden; background:#060b09; transition:border-color .2s; }
+  #camwrap img { width:100%; height:100%; object-fit:cover; display:none; }
+  #camwrap.live img { display:block; }
+  #camoff { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+            font-size:12px; opacity:.6; text-align:center; padding:0 10px; }
+  #camwrap.live #camoff { display:none; }
+  #camwrap[data-state="calm"] { border-color:#fff; }
+  #camwrap[data-state="concerned"] { border-color:#ffa534; }
+  #camwrap[data-state="stressed"] { border-color:#ff4d4d; }
+  #camwrap[data-state="happy"] { border-color:#3ddc84; }
+  #camwrap[data-state="calibrating"], #camwrap[data-state="starting"] { border-color:#7fb0ff; }
+  #camside { display:flex; flex-direction:column; gap:6px; min-width:0; flex:1; }
+  .btn { background:#1d3a2e; color:#e8f3ec; border:1px solid #2f5545; border-radius:8px; padding:7px 10px;
+         cursor:pointer; font-size:12.5px; width:100%; box-sizing:border-box; }
+  #chip { border-radius:8px; padding:6px 8px; text-align:center; font-size:12px; border:1px solid #fff3;
+          background:#10201a; transition:background .2s, border-color .2s; }
+  #chip[data-state="calm"] { border-color:#fff; }
+  #chip[data-state="concerned"] { border-color:#ffa534; background:#3a2a10; }
+  #chip[data-state="stressed"] { border-color:#ff4d4d; background:#3a1414; }
+  #chip[data-state="happy"] { border-color:#3ddc84; background:#103a22; }
+  #chip[data-state="calibrating"], #chip[data-state="starting"] { border-color:#7fb0ff; }
+  #camside .note { font-size:10.5px; line-height:1.3; }
+  #camside label.note { display:flex; align-items:center; gap:5px; }
+  #why:empty { display:none; }
+
+  /* ---- panda ---- */
+  #pandaWrap { display:flex; align-items:center; justify-content:center; }
+  #panda { background:none; border:none; cursor:pointer; padding:0; line-height:0; transition:transform .15s; }
+  #panda img { width:140px; height:140px; display:block; filter:drop-shadow(0 0 10px rgba(255,255,255,.18)); }
+  #panda:hover { transform:scale(1.07) rotate(-3deg); }
+  #pandaWrap[data-mood="idle"]   #panda img { filter:drop-shadow(0 0 10px rgba(255,255,255,.18)); }
+  #pandaWrap[data-mood="concerned"] #panda img { filter:drop-shadow(0 0 16px rgba(255,165,52,.55)); }
+  #pandaWrap[data-mood="stressed"]  #panda img { filter:drop-shadow(0 0 16px rgba(255,77,77,.55)); }
+  #pandaWrap[data-mood="happy"]     #panda img { filter:drop-shadow(0 0 16px rgba(61,220,132,.55)); }
+  #pandaWrap[data-mood="chill"]     #panda img { filter:drop-shadow(0 0 16px rgba(127,176,255,.5)); }
+  #pandaWrap[data-mood="grumpy"]    #panda img { filter:drop-shadow(0 0 16px rgba(255,165,52,.6)); }
+  #pandaWrap[data-mood="dramatic"]  #panda img { filter:drop-shadow(0 0 18px rgba(255,77,138,.65)); }
+  #pandaWrap[data-mood="gentle"]    #panda img { filter:drop-shadow(0 0 16px rgba(61,220,132,.5)); }
+
+  #bubble { position:relative; background:#f4fff8; color:#12251d; border-radius:14px; padding:14px;
+            font-size:14px; line-height:1.4; width:100%; box-sizing:border-box; }
+  #bubble::after { content:""; position:absolute; bottom:-10px; left:50%; margin-left:-10px;
+                   border:10px solid transparent; border-top-color:#f4fff8; border-bottom:0; }
+  @keyframes pop { 0% { transform:scale(.92); } 60% { transform:scale(1.04); } 100% { transform:scale(1); } }
+  #bubble.pop { animation:pop .25s ease; }
+  #actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .act { background:#2f8f64; color:#fff; border:none; border-radius:8px; padding:7px 12px; cursor:pointer; font-size:13px; }
+  .act:nth-child(2) { background:#d9e8df; color:#12251d; }
+  #meta { font-size:11px; opacity:.6; margin-top:8px; }
+
+  .panel { width:100%; box-sizing:border-box; background:#0b1612; border:1px solid #2f5545; border-radius:10px;
+           padding:10px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; gap:8px; } .row .btn { flex:1; }
+
+  @keyframes bounce { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-24px); } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .cheer { animation:bounce .45s ease 4; }
+  .party { animation:spin .7s ease 3; }
+  @keyframes fall { to { transform:translateY(110vh) rotate(360deg); } }
+  .confetti-piece { position:fixed; top:-40px; border-radius:2px; animation:fall 2.6s linear forwards;
+                    pointer-events:none; z-index:60; }
+
+  @media (max-width: 860px) {
+    .wrap { flex-direction:column; height:auto; min-height:calc(100vh - 176px); }
+    .right { width:100%; }
+  }
+  @media (max-width: 640px) {
+    body { padding-top:150px; }
+    #camwrap { width:110px; height:82px; }
+    #panda img { width:104px; height:104px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="camPanel">
+  <div id="camwrap" data-state="off">
+    <img id="cam" alt="">
+    <div id="camoff">Camera off</div>
+  </div>
+  <div id="camside">
+    <button id="faceBtn" class="btn">Enable face tracking</button>
+    <div id="chip" data-state="off">Face tracking off</div>
+    <div id="why" class="note"></div>
+    <label class="note"><input type="checkbox" id="overlay"> show tracking overlay</label>
+    <div class="note">Runs locally. Nothing is saved.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="left">
+    <label>Problem (paste or describe it)</label>
+    <textarea id="problem" placeholder="Paste or describe the problem here..."></textarea>
+    <label>Your code</label>
+    <textarea id="code" spellcheck="false" placeholder="Start writing your code..."></textarea>
+    <label>Test results / errors (optional)</label>
+    <textarea id="tests" placeholder="e.g. 2/5 passed, time limit exceeded"></textarea>
+  </div>
+
+  <div class="right">
+    <div id="bubble">
+      <div id="bubbleText">Stuck on something? Give me a tap.</div>
+      <div id="actions"></div>
+      <div id="meta"></div>
+    </div>
+    <div id="pandaWrap" data-mood="idle">
+      <button id="panda" title="Ask the panda for a hint">
+        <img src="/static/assets/panda.svg" alt="Panda companion" width="140" height="140">
+      </button>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <button id="failBtn" class="btn">Test failed</button>
+        <button id="solveBtn" class="btn">Solved it!</button>
+      </div>
+      <div class="note">Failed runs: <span id="failed">0</span> &middot; these buttons stand in for game events</div>
+      <button id="reset" class="btn">reset everything</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const IDLE_TEXT = "Stuck on something? Give me a tap.";
+const CHIP = {
+  off:"Face tracking off", starting:"Starting camera...",
+  calibrating:"Calibrating - hold a relaxed face", away:"No face seen",
+  calm:"Calm", concerned:"Concerned", stressed:"Stressed", happy:"Happy",
+};
+const POLL_MS = 500;
+
+let level = 0, history = [], lastProblem = "";
+let lastTyped = Date.now();
+let currentOfferId = null, handledId = 0;      // which offer is on screen / the newest one the player answered
+let hinting = false, faceOn = false, polling = false;
+
+// ---------- small helpers ----------
+function setBubble(text, meta = "") { $("bubbleText").textContent = text; $("meta").textContent = meta; }
+function popBubble() { const b = $("bubble"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+function addAction(label, fn) {
+  const b = document.createElement("button");
+  b.className = "act"; b.textContent = label; b.onclick = fn;
+  $("actions").appendChild(b);
+}
+function markHandled() {          // the player answered the current offer
+  if (currentOfferId !== null) handledId = Math.max(handledId, currentOfferId);
+  currentOfferId = null;
+  $("actions").innerHTML = "";
+}
+function setMood(mood) { $("pandaWrap").dataset.mood = mood || "idle"; }
+function setChip(key, override) {
+  const label = CHIP[key] || CHIP.off;
+  $("chip").dataset.state = key;
+  $("camwrap").dataset.state = key;
+  $("chip").textContent = override || label;
+}
+async function postEvent(type) {
+  try {
+    const r = await fetch("/event", { method:"POST", headers:{ "Content-Type":"application/json" },
+                                      body: JSON.stringify({ type }) });
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+// Tab key inserts spaces in the code box
+$("code").addEventListener("keydown", e => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const t = e.target, s = t.selectionStart;
+    t.value = t.value.slice(0, s) + "    " + t.value.slice(t.selectionEnd);
+    t.selectionStart = t.selectionEnd = s + 4;
+  }
+});
+["code", "problem", "tests"].forEach(id => $(id).addEventListener("input", () => { lastTyped = Date.now(); }));
+
+// ---------- celebration ----------
+function celebrate(kind) {
+  const p = $("pandaWrap");
+  p.classList.add(kind === "big" ? "party" : "cheer");
+  setTimeout(() => p.classList.remove("party", "cheer"), 2600);
+  const colors = ["#3ddc84", "#f4fff8", "#7fb0ff", "#ffd166", "#2f8f64"];
+  const n = kind === "big" ? 40 : 16;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span");
+    s.className = "confetti-piece";
+    const size = 6 + Math.random() * 8;
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.width = size + "px";
+    s.style.height = (size * 1.6) + "px";
+    s.style.background = colors[Math.floor(Math.random() * colors.length)];
+    s.style.animationDelay = Math.random() * 0.8 + "s";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 3600);
+  }
+}
+
+// ---------- hints ----------
+function resetAll() {
+  markHandled();
+  level = 0; history = [];
+  setBubble(IDLE_TEXT);
+  setMood("idle");
+  $("failed").textContent = "0";
+  postEvent("reset");
+}
+function checkProblem() {
+  const p = $("problem").value.trim();
+  if (p !== lastProblem) { lastProblem = p; resetAll(); }   // new problem = start over
+}
+$("problem").addEventListener("change", checkProblem);
+
+async function askHint() {
+  if (hinting) return;
+  hinting = true;
+  markHandled();
+  postEvent("accepted");                       // Panda stays quiet for a bit after helping
+  checkProblem();
+  level = Math.min(level + 1, 3);
+  setBubble("Hmm, let me take a look...");
+  try {
+    const res = await fetch("/hint", {         // the server reads your live state itself
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problem: $("problem").value.trim(),
+        code: $("code").value,
+        test_results: $("tests").value,
+        level, previous_hints: history
+      })
+    });
+    const data = await res.json();
+    history.push(data.text);
+    setBubble(data.text, "Hint " + level + "/3 · mood: " + data.mood + " · player state: " + data.player_state +
+                         (level === 3 ? " (max)" : " · click again for more"));
+    setMood(data.mood);
+    popBubble();
+  } catch (err) {
+    setBubble("Can't reach the server. Is it running?");
+  }
+  hinting = false;
+}
+$("panda").onclick = askHint;
+
+// ---------- Panda follows your face in real time ----------
+function showOffer(o) {
+  currentOfferId = o.id;
+  setBubble(o.text);
+  $("actions").innerHTML = "";
+  setMood(o.state);
+  popBubble();
+  if (o.kind === "help") {
+    addAction("Yes, a hint please", askHint);
+    addAction("No thanks", () => {
+      markHandled();
+      postEvent("dismissed");
+      setBubble("Okay. I'm here if you want me.");
+      setMood("idle");
+    });
+  } else {   // "progress": they look happy
+    addAction("Yes!", () => {
+      markHandled();
+      postEvent("accepted");
+      setBubble(o.yes_text);
+      celebrate("normal");
+    });
+    addAction("Not really", askHint);
+  }
+}
+function clearOffer() {          // the server says there's nothing to offer any more (you calmed down)
+  currentOfferId = null;
+  $("actions").innerHTML = "";
+  setBubble(IDLE_TEXT);
+  setMood("idle");
+}
+
+async function poll() {
+  if (!faceOn || polling) return;
+  polling = true;
+  try {
+    const res = await fetch("/status", { method:"POST", headers:{ "Content-Type":"application/json" },
+                                         body: JSON.stringify({ idle_seconds: (Date.now() - lastTyped) / 1000 }) });
+    const s = await res.json();
+    if (!s.face_on) setChip("off");
+    else if (s.calibrating) setChip("calibrating");
+    else setChip(s.state);
+    $("failed").textContent = s.failed_runs;
+    $("why").textContent = s.face_on && s.why ? "Panda: " + s.why : "";
+
+    if (!hinting) {
+      if (s.offer) {
+        // a new or changed offer replaces whatever bubble is showing
+        if (s.offer.id > handledId && s.offer.id !== currentOfferId) showOffer(s.offer);
+      } else if (currentOfferId !== null) {
+        clearOffer();
+      }
+    }
+  } catch (e) { /* server busy, try again next tick */ }
+  polling = false;
+}
+setInterval(poll, POLL_MS);
+
+// ---------- camera preview + face tracking switch ----------
+function startVideo() {
+  $("cam").src = "/face/video?debug=" + ($("overlay").checked ? 1 : 0) + "&t=" + Date.now();
+  $("camwrap").classList.add("live");
+}
+function stopVideo() {
+  $("cam").removeAttribute("src");
+  $("camwrap").classList.remove("live");
+}
+$("overlay").onchange = () => { if (faceOn) startVideo(); };
+
+$("faceBtn").onclick = async () => {
+  if (faceOn) {
+    await fetch("/face/stop", { method:"POST" });
+    faceOn = false;
+    stopVideo();
+    if (currentOfferId !== null) clearOffer();
+    $("faceBtn").textContent = "Enable face tracking";
+    $("why").textContent = "";
+    setChip("off");
+    return;
+  }
+  setChip("starting");
+  try {
+    const r = await (await fetch("/face/start", { method:"POST" })).json();
+    if (!r.ok) { setChip("off", r.error); return; }
+    faceOn = true;
+    startVideo();
+    $("faceBtn").textContent = "Turn off face tracking";
+  } catch (e) { setChip("off", "Can't reach the server"); }
+};
+
+// ---------- stand-ins for game events (Unity will send these) ----------
+$("failBtn").onclick = async () => {
+  const r = await postEvent("failed");
+  if (r) $("failed").textContent = r.failed_runs;
+};
+$("solveBtn").onclick = async () => {
+  markHandled();
+  const r = await postEvent("solved");
+  if (r && r.celebrate) { setBubble(r.text); celebrate(r.celebrate); }
+};
+$("reset").onclick = resetAll;
+
+// If you refresh the page while the server is already tracking, pick it back up
+(async function init() {
+  setChip("off");
+  try {
+    const s = await (await fetch("/status", { method:"POST", headers:{ "Content-Type":"application/json" },
+                                              body: JSON.stringify({ idle_seconds: 0 }) })).json();
+    if (s.face_on) {
+      faceOn = true;
+      startVideo();
+      $("faceBtn").textContent = "Turn off face tracking";
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

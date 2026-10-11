@@ -3,7 +3,12 @@ guid: abe7faaf10b614834a5433e7fc190ad7
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Designer_Logic_PBR
+    second: {fileID: 2100000, guid: 797559ecdcb044abb9ce67ec5af94a62, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
