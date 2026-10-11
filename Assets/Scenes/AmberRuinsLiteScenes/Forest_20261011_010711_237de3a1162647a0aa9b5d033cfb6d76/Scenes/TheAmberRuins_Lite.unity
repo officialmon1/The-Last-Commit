@@ -52769,7 +52769,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1458841082}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 96b8079627396b9ccf52da2b6fb3047e, type: 3}
   m_Name: 
@@ -55460,6 +55460,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b60f67a7c61bdca47ac9d8a854affc8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartScreenController
+  playerControlScripts: []
   onBeginEscape:
     m_PersistentCalls:
       m_Calls: []

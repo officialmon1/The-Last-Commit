@@ -5,6 +5,14 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class StartScreenController : MonoBehaviour
 {
+    [Header("Player Controls")]
+    [Tooltip(
+        "Assign the player movement and mouse-look components. " +
+        "Do not assign the Camera, UI Document, or this controller."
+    )]
+    [SerializeField]
+    private Behaviour[] playerControlScripts;
+
     [Header("Gameplay Connection")]
     [Tooltip("Invoked when the player clicks Begin Escape.")]
     [SerializeField]
@@ -38,9 +46,12 @@ public class StartScreenController : MonoBehaviour
     private Button briefingBackButton;
 
     private bool escapeStarted;
+    private bool uiReady;
 
     private void OnEnable()
     {
+        uiReady = false;
+
         UIDocument document = GetComponent<UIDocument>();
         root = document.rootVisualElement;
 
@@ -66,7 +77,7 @@ public class StartScreenController : MonoBehaviour
         {
             Debug.LogError(
                 "StartScreenController: Required UI elements " +
-                "were not found. Assign the supplied " +
+                "were not found. Assign the updated " +
                 "StartScreen.uxml to the UI Document Source Asset.",
                 this
             );
@@ -80,28 +91,33 @@ public class StartScreenController : MonoBehaviour
         beginButton.clicked += BeginEscape;
         briefingBackButton.clicked += ShowMenu;
 
-        root.RegisterCallback<GeometryChangedEvent>(
-            OnGeometryChanged
-        );
+        RegisterGeometryCallback(root);
+        RegisterGeometryCallback(menuPanel);
+        RegisterGeometryCallback(instructionsPanel);
+        RegisterGeometryCallback(briefingPanel);
 
-        menuPanel.RegisterCallback<GeometryChangedEvent>(
-            OnGeometryChanged
-        );
-
-        instructionsPanel.RegisterCallback<GeometryChangedEvent>(
-            OnGeometryChanged
-        );
-
-        briefingPanel.RegisterCallback<GeometryChangedEvent>(
-            OnGeometryChanged
-        );
+        uiReady = true;
 
         ApplyMenuFont();
         ShowMenu();
     }
 
+    private void LateUpdate()
+    {
+        if (!uiReady || escapeStarted)
+        {
+            return;
+        }
+
+        // Keep gameplay scripts from taking input while the menu is open.
+        SetPlayerControls(false);
+        UnlockCursor();
+    }
+
     private void OnDisable()
     {
+        uiReady = false;
+
         if (enterButton != null)
         {
             enterButton.clicked -= ShowBriefing;
@@ -133,6 +149,43 @@ public class StartScreenController : MonoBehaviour
         UnregisterGeometryCallback(briefingPanel);
     }
 
+    private void SetPlayerControls(bool enabled)
+    {
+        if (playerControlScripts == null)
+        {
+            return;
+        }
+
+        foreach (Behaviour controlScript in playerControlScripts)
+        {
+            if (controlScript == null || controlScript == this)
+            {
+                continue;
+            }
+
+            if (controlScript.enabled != enabled)
+            {
+                controlScript.enabled = enabled;
+            }
+        }
+    }
+
+    private static void UnlockCursor()
+    {
+        UnityEngine.Cursor.lockState = CursorLockMode.None;
+        UnityEngine.Cursor.visible = true;
+    }
+
+    private void RegisterGeometryCallback(VisualElement element)
+    {
+        if (element != null)
+        {
+            element.RegisterCallback<GeometryChangedEvent>(
+                OnGeometryChanged
+            );
+        }
+    }
+
     private void UnregisterGeometryCallback(VisualElement element)
     {
         if (element != null)
@@ -145,7 +198,8 @@ public class StartScreenController : MonoBehaviour
 
     private bool HasRequiredElements()
     {
-        return screen != null
+        return root != null
+            && screen != null
             && shell != null
             && menuPanel != null
             && instructionsPanel != null
@@ -164,7 +218,7 @@ public class StartScreenController : MonoBehaviour
 
     private void FitMenuToScreen()
     {
-        if (root == null || shell == null)
+        if (!uiReady || root == null || shell == null)
         {
             return;
         }
@@ -253,30 +307,44 @@ public class StartScreenController : MonoBehaviour
 
     public void ShowMenu()
     {
-        if (!HasRequiredElements())
+        if (!uiReady || !HasRequiredElements())
         {
             return;
         }
 
         escapeStarted = false;
+
+        SetPlayerControls(false);
+        UnlockCursor();
+
+        root.style.display = DisplayStyle.Flex;
         screen.style.display = DisplayStyle.Flex;
 
         ShowOnly(menuPanel);
-
-        UnityEngine.Cursor.lockState = CursorLockMode.None;
-        UnityEngine.Cursor.visible = true;
 
         enterButton.Focus();
     }
 
     private void ShowInstructions()
     {
+        if (!uiReady)
+        {
+            return;
+        }
+
+        UnlockCursor();
         ShowOnly(instructionsPanel);
         instructionsBackButton.Focus();
     }
 
     private void ShowBriefing()
     {
+        if (!uiReady)
+        {
+            return;
+        }
+
+        UnlockCursor();
         ShowOnly(briefingPanel);
         beginButton.Focus();
     }
@@ -302,26 +370,26 @@ public class StartScreenController : MonoBehaviour
 
         FitMenuToScreen();
 
-        // Recheck after the newly visible panel has been laid out.
         root.schedule.Execute(FitMenuToScreen);
     }
 
     private void BeginEscape()
     {
-        if (escapeStarted)
+        if (!uiReady || escapeStarted)
         {
             return;
         }
 
+        Debug.Log("BEGIN ESCAPE BUTTON CLICKED", this);
+
         escapeStarted = true;
-        screen.style.display = DisplayStyle.None;
 
-        Debug.Log(
-            "Begin Escape clicked. Menu hidden. " +
-            "Connect On Begin Escape to your gameplay controller.",
-            this
-        );
+        // Hide the document without disabling this controller.
+        root.style.display = DisplayStyle.None;
 
+        SetPlayerControls(true);
+
+        // Let the player controller handle its gameplay cursor state.
         onBeginEscape.Invoke();
     }
 }

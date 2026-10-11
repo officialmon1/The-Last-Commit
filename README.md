@@ -224,7 +224,7 @@ The-Last-Commit/
 │   │       └── UnityDefaultRuntimeTheme.tss
 │   └── UI/
 │       ├── Images/
-│       │   └── forest-background.png
+│       │   └── forest-background.gif
 │       ├── StartScreen.uss
 │       ├── StartScreen.uxml
 │       └── StartScreenPanelSettings.asset
