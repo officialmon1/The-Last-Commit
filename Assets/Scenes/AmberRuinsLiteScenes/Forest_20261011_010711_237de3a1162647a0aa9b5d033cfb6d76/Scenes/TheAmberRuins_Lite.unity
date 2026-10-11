@@ -10387,6 +10387,7 @@ MonoBehaviour:
   - {fileID: 127244920}
   - {fileID: 680205641}
   ruinStagger: 0.45
+  sanctuaryDelay: 1.2
   turnOnDuration: 2.5
   endGameOnEnter: 1
   enterPadding: 0.6
@@ -63917,7 +63918,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 981411793294f4d7388991e3b1f30b08, type: 2}
+  - {fileID: 2100000, guid: 17d879d0c49b94c00a07ebc4f1bc1335, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -64217,7 +64218,6 @@ MonoBehaviour:
   trackTimeLimitSeconds: 2160
   fontSize: 15
   uiScale: 1
-  debugTimeUpKey: 102
 --- !u!1 &1719450001
 GameObject:
   m_ObjectHideFlags: 0
@@ -64267,6 +64267,8 @@ MonoBehaviour:
   useStartKey: 0
   hideUntilStart:
   - {fileID: 1557860735}
+  playIntro: 1
+  menuVideo: Videos/forest-background
   skyViewWhileWaiting: 1
   skyHeight: 18
   skyDistance: 22
