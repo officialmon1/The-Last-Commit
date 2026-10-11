@@ -47,6 +47,8 @@ public class CodeEditorUI : MonoBehaviour
     public string CurrentCode => _code != null ? _code.text : "";
     public string CurrentTestResults => _lastTestResults;
     public float MinutesLeft => SecondsLeft / 60f;
+    /// <summary>Seconds used on the track timer (frozen once every level is cleared): the run's clear time.</summary>
+    public float ElapsedSeconds => _runElapsed;
     public float IdleSeconds => Time.unscaledTime - _lastCodeEditTime;
     /// <summary>Fired when a track's Boss is cleared (argument = track). Hook story events here.</summary>
     public static event Action<string> TrackCompleted;
@@ -452,6 +454,14 @@ public class CodeEditorUI : MonoBehaviour
     }
 
     void OnApplicationQuit() => SaveLocal();
+
+    /// <summary>Forgets the current track's local save so the next run starts from zero (used by "Play again").</summary>
+    public void DeleteSave()
+    {
+        _runStarted = false;   // stops the periodic / on-quit save from writing it back
+        try { if (_track != null && File.Exists(SavePath)) File.Delete(SavePath); }
+        catch (Exception e) { Debug.LogWarning("CodeEditorUI: failed to delete the save: " + e.Message); }
+    }
 
     // ------------------------------------------------------------------ Track timer
 

@@ -110,7 +110,11 @@ namespace Panda
             yield return PostJson("/event", "{\"type\":\"reset\"}", null);
             OnBackendReady?.Invoke();
             if (autoEnableFaceTracking)
-                StartFaceTracking();
+            {
+                // the webcam only turns on once the player has pressed Begin on the start screen (which tells them it will)
+                if (GameStart.Instance != null && !GameStart.Started) GameStart.GameStarted += StartFaceTrackingWhenGameStarts;
+                else StartFaceTracking();
+            }
 
             StartCoroutine(PollStatusLoop());
         }
@@ -200,9 +204,16 @@ namespace Panda
 
         void OnDestroy()
         {
+            GameStart.GameStarted -= StartFaceTrackingWhenGameStarts;
             if (Instance != this) return;
             Instance = null;
             StopBackend();
+        }
+
+        void StartFaceTrackingWhenGameStarts()
+        {
+            GameStart.GameStarted -= StartFaceTrackingWhenGameStarts;
+            if (this != null && BackendReady) StartFaceTracking();
         }
 
         void StopBackend()

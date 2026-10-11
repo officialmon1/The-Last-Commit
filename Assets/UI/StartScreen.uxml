@@ -194,9 +194,14 @@
                     class="warning"
                 />
 
+                <ui:Label
+                    text="Your webcam turns on when the escape begins: the panda reads your expression to know when to offer help. Nothing is recorded or uploaded. Pressing Begin Escape means you are okay with that."
+                    class="consent-note"
+                />
+
                 <ui:Button
                     name="begin-button"
-                    text="Begin Escape"
+                    text="Begin Escape (camera on)"
                     class="menu-button primary-button"
                 />
 

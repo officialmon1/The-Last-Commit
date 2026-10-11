@@ -7,7 +7,8 @@
     flex-grow: 1;
     overflow: hidden;
 
-    background-color: rgb(20, 21, 34);
+    /* see-through: the forest is shown behind the menu by a camera circling in the sky (GameStart) */
+    background-color: rgba(20, 21, 34, 0);
     color: rgb(245, 233, 210);
 }
 
@@ -19,8 +20,7 @@
     top: 0;
     bottom: 0;
 
-    background-image: url("Videos/forest-background.mp4");
-    -unity-background-scale-mode: scale-and-crop;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .background-shade {
@@ -31,7 +31,7 @@
     top: 0;
     bottom: 0;
 
-    background-color: rgba(15, 13, 18, 0.28);
+    background-color: rgba(15, 13, 18, 0.4);
 }
 
 /* The C# controller centers and scales this container. */
@@ -400,6 +400,18 @@
     color: rgb(193, 154, 73);
 
     margin-top: 9px;
+}
+
+.consent-note {
+    width: 100%;
+    font-size: 14px;
+
+    -unity-text-align: middle-center;
+    white-space: normal;
+
+    color: rgb(197, 180, 147);
+
+    margin-bottom: 14px;
 }
 
 .warning {

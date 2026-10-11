@@ -7,6 +7,7 @@ using Panda;
 /// When the four prerequisite problems are solved it repairs every <see cref="ruins"/> entry one after another,
 /// then turns on: the amber seal and light fade in and the final problem (the CodeTerminal on this object) unlocks.
 /// Solving the final problem opens it: the seal dissolves and the barrier stops blocking the way.
+/// Walking through the open gateway ends the game (GameEnd: clear time, leaderboard, play again).
 /// </summary>
 public class PortalController : MonoBehaviour
 {
@@ -25,12 +26,18 @@ public class PortalController : MonoBehaviour
     [Tooltip("Seconds between one ruin rebuilding and the next.")] public float ruinStagger = 0.45f;
     public float turnOnDuration = 2.5f;
 
+    [Header("Escape")]
+    [Tooltip("Walking into the open gateway ends the game with the end screen (clear time, leaderboard, play again).")] public bool endGameOnEnter = true;
+    [Tooltip("Extra metres around the barrier that still count as 'through the gate'.")] public float enterPadding = 0.6f;
+
     public State Current { get; private set; } = State.Dormant;
 
     Material _mat;
     Color _onColor, _onEmission;
     float _onIntensity;
-    bool _animating;
+    bool _animating, _escaped;
+    Bounds _gate;   // the barrier's volume, captured while its collider is still enabled
+    Transform _player;
     static readonly Color DormantColor = new Color(0.12f, 0.1f, 0.09f, 0.18f);
 
     void Start()
@@ -43,6 +50,7 @@ public class PortalController : MonoBehaviour
             _mat.EnableKeyword("_EMISSION");
         }
         if (portalLight != null) _onIntensity = portalLight.intensity;
+        _gate = barrier != null ? barrier.bounds : new Bounds(transform.position + Vector3.up, new Vector3(3f, 3f, 1f));
         SetGlow(0f);
         CodeEditorUI.TrackCompleted += HandleTrackCompleted;
     }
@@ -60,6 +68,24 @@ public class PortalController : MonoBehaviour
         // a slow breathing pulse while the portal is awake
         if (Current == State.On && portalLight != null && !_animating)
             portalLight.intensity = _onIntensity * (1f + 0.15f * Mathf.Sin(Time.time * 2.2f));
+
+        if (Current == State.Open && endGameOnEnter && !_escaped) CheckEscape(editor);
+    }
+
+    /// <summary>The player stepping into the open gateway = escaped: freeze the run and show the end screen.</summary>
+    void CheckEscape(CodeEditorUI editor)
+    {
+        if (_player == null)
+        {
+            var fpc = FindAnyObjectByType<FirstPersonController>();
+            if (fpc == null) return;
+            _player = fpc.transform;
+        }
+        var gate = _gate;
+        gate.Expand(enterPadding * 2f);
+        if (!gate.Contains(_player.position + Vector3.up * 0.9f)) return;   // the controller's origin is at the feet
+        _escaped = true;
+        GameEnd.Ensure().Show(editor != null ? editor.ElapsedSeconds : 0f);
     }
 
     void HandleTrackCompleted(string completedTrack)
