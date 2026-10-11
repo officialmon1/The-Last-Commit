@@ -3,7 +3,7 @@
     {
       "stage": 1,
       "slug": "dijkstra-1-heap",
-      "title": "Stage 1 · Priority Queue",
+      "title": "Priority Queue",
       "description": "Dijkstra always expands the closest unvisited node next. A min-heap (priority queue) hands you the smallest element in O(log n).\n\nInput: q, then q lines, each `push x` or `pop`. For every pop, print the popped value on its own line.\n\nComplete the two TODO lines with heapq.heappush / heapq.heappop.",
       "stdin": "40\npush 82\npop\npush 95\npop\npush 29\npop\npush 14\npush 70\npop\npop\npush 4\npop\npush 30\npush 4\npush 92\npush 70\npop\npop\npop\npush 98\npush 90\npop\npop\npop\npush 98\npop\npush 12\npop\npush 46\npush 78\npop\npop\npush 59\npush 49\npop\npop\npush 81\npush 47\npush 91\npop\n",
       "expected_output": "82\n95\n29\n14\n70\n4\n4\n30\n70\n90\n92\n98\n98\n12\n46\n78\n49\n59\n47\n",
@@ -15,7 +15,7 @@
     {
       "stage": 2,
       "slug": "dijkstra-2-adjacency",
-      "title": "Stage 2 · Adjacency List",
+      "title": "Adjacency List",
       "description": "A graph is easiest to walk when every node knows its own outgoing edges: adj[u] is a list of (v, w).\n\nInput: n m, then m lines `u v w` meaning a directed edge u -> v with weight w (nodes are 1..n). Output n lines: line u lists node u's outgoing edges in input order as `v:w` separated by spaces (an empty line if it has none).\n\nComplete the TODO line.",
       "stdin": "6 9\n6 2 10\n1 2 4\n4 3 15\n6 3 6\n3 6 7\n6 3 3\n5 2 18\n6 2 6\n4 6 9\n",
       "expected_output": "2:4\n\n6:7\n3:15 6:9\n2:18\n2:10 3:6 3:3 2:6\n",
@@ -27,7 +27,7 @@
     {
       "stage": 3,
       "slug": "dijkstra-3-bfs",
-      "title": "Stage 3 · BFS",
+      "title": "BFS",
       "description": "Breadth-first search finds the fewest edges from the start to every node when all edges cost the same. Dijkstra is the same loop with a priority queue instead of a plain queue.\n\nInput: n m s, then m lines `u v` (directed edge). Print dist[1..n] separated by spaces, -1 for unreachable nodes.\n\nComplete the TODO inside the loop.",
       "stdin": "8 12 1\n5 3\n4 6\n1 2\n1 4\n1 5\n8 4\n6 2\n5 2\n4 5\n8 2\n5 8\n1 7\n",
       "expected_output": "0 1 2 1 1 2 1 2\n",
@@ -39,7 +39,7 @@
     {
       "stage": 4,
       "slug": "dijkstra-4-relax",
-      "title": "Stage 4 · Relaxation",
+      "title": "Relaxation",
       "description": "Relaxing an edge u -> v with weight w means: if the path through u is shorter, update dist[v] = dist[u] + w. Dijkstra relaxes every outgoing edge of the node it expands.\n\nInput: n, then a line with dist[1..n] (-1 means infinity), then m and m lines `u v w`. Relax every edge once, in input order, and print the new dist (keep -1 for still-infinite).\n\nComplete the TODO line(s).",
       "stdin": "6\n0 4 -1 7 -1 2\n7\n1 6 2\n2 6 7\n5 1 7\n4 5 8\n5 3 9\n1 6 9\n3 6 2\n",
       "expected_output": "0 4 24 7 15 2\n",
@@ -51,8 +51,8 @@
     {
       "stage": 5,
       "slug": "dijkstra-5-boss",
-      "title": "BOSS · Dijkstra",
-      "description": "Put it all together. Input: n m s, then m lines `u v w` (directed edge, w >= 0). Print the shortest distance from s to every node 1..n separated by spaces, -1 if unreachable.\n\nRecipe: build the adjacency list (Stage 2), start with dist[s] = 0 and a min-heap holding (0, s) (Stage 1), pop the closest node like the BFS loop (Stage 3), skip it if the popped distance is stale, and relax its edges (Stage 4), pushing any improved node back into the heap.\n\nUse the Ref buttons to look at your own solutions to the earlier stages.",
+      "title": "Dijkstra (BOSS)",
+      "description": "Put it all together. Input: n m s, then m lines `u v w` (directed edge, w >= 0). Print the shortest distance from s to every node 1..n separated by spaces, -1 if unreachable.\n\nRecipe: build the adjacency list (Level 2), start with dist[s] = 0 and a min-heap holding (0, s) (Level 1), pop the closest node like the BFS loop (Level 3), skip it if the popped distance is stale, and relax its edges (Level 4), pushing any improved node back into the heap.\n\nThe Ref buttons show your own solutions to the levels you have already cleared.",
       "stdin": "10 20 1\n10 2 8\n9 7 19\n1 4 13\n8 9 3\n4 5 17\n9 2 11\n5 4 8\n8 1 8\n10 5 19\n3 5 15\n2 9 12\n5 3 4\n9 10 18\n3 10 29\n9 4 1\n10 7 8\n10 8 1\n4 9 15\n1 9 22\n2 8 21\n",
       "expected_output": "0 33 34 13 30 -1 41 41 22 40\n",
       "starter_code": "import sys, heapq\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s = int(data[0]), int(data[1]), int(data[2])\n    # your code here\n\nmain()\n",
