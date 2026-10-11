@@ -886,7 +886,7 @@ public class CodeEditorUI : MonoBehaviour
         t.alignment = anchor;
         t.supportRichText = false;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
-        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.verticalOverflow = VerticalWrapMode.Overflow;   // never truncate: a storybook font's tall line height would make fixed-height labels (banner, status, titles) vanish
         return t;
     }
 
