@@ -63,7 +63,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         _cam.nearClipPlane = 0.03f;
         _yaw = 0f; _pitch = 4f;
 
-        var skin = Lit(new Color(0.93f, 0.76f, 0.66f), 0.42f);
+        var skin = Lit(new Color(0.90f, 0.72f, 0.62f), 0.3f);   // matte: shiny skin reads as plastic
         var cloth = Lit(new Color(0.3f, 0.38f, 0.66f), 0.12f);
         var pants = Lit(new Color(0.17f, 0.17f, 0.21f), 0.1f);
         _hands = BuildHands(_cam.transform, skin, cloth);
@@ -253,36 +253,51 @@ public class FirstPersonFlowerDeath : MonoBehaviour
 
     // ------------------------------------------------------------------ Hands
 
-    /// <summary>A pair of first-person hands under the camera. Hand local space: fingers along +Y, palm facing -Z (towards the camera when raised).</summary>
+    /// <summary>
+    /// A pair of first-person hands under the camera, built from primitives: a cupped palm with a dome on the back, thumb
+    /// and heel pads, bony knuckles, fingers in a relaxed curl that grows towards the little finger, fingertip pads and
+    /// nails. Hand local space: fingers along +Y, palm facing -Z (towards the camera when raised), so the back of the hand
+    /// and the nails are on +Z. The thumb and the index finger sit on the inner side (towards the middle of the view).
+    /// </summary>
     Transform BuildHands(Transform cam, Material skin, Material sleeve)
     {
+        var pad = Lit(new Color(0.90f, 0.65f, 0.58f), 0.3f);     // joints, pads and fingertips: a little more blood in them
+        var nail = Lit(new Color(0.96f, 0.86f, 0.80f), 0.65f);
         var root = new GameObject("Hands").transform;
         root.SetParent(cam, false);
         foreach (float side in new[] { -1f, 1f })
         {
+            float inner = -side;   // +x for the left hand, -x for the right: where the thumb and the index finger are
             var hand = new GameObject(side < 0 ? "LeftHand" : "RightHand").transform;
             hand.SetParent(root, false);
             hand.localPosition = new Vector3(side * 0.15f, 0f, 0f);
             hand.localRotation = Quaternion.Euler(0f, side * 8f, side * -16f);   // hands spread slightly outward, palms turned a little inward
 
-            // palm: pill shape + bulge at the heel
-            Prim(PrimitiveType.Capsule, skin, new Vector3(0f, 0.0f, 0f), new Vector3(0.082f, 0.05f, 0.027f), hand);
-            Prim(PrimitiveType.Sphere, skin, new Vector3(0f, -0.03f, -0.002f), new Vector3(0.078f, 0.055f, 0.032f), hand);
-            Prim(PrimitiveType.Sphere, skin, new Vector3(0f, 0.04f, 0.004f), new Vector3(0.08f, 0.03f, 0.03f), hand);   // knuckle ridge at the finger roots
+            // palm: a cupped slab, a dome on the back, the thumb muscle, the heel on the little-finger side
+            Prim(PrimitiveType.Sphere, skin, new Vector3(0f, 0.004f, 0.003f), new Vector3(0.084f, 0.1f, 0.03f), hand);
+            Prim(PrimitiveType.Sphere, skin, new Vector3(0f, 0.012f, 0.012f), new Vector3(0.078f, 0.086f, 0.022f), hand);
+            Prim(PrimitiveType.Sphere, pad, new Vector3(inner * 0.027f, -0.018f, -0.009f), new Vector3(0.042f, 0.056f, 0.03f), hand);   // thenar pad
+            Prim(PrimitiveType.Sphere, pad, new Vector3(inner * -0.028f, -0.02f, -0.006f), new Vector3(0.03f, 0.056f, 0.026f), hand);   // hypothenar pad
+            Prim(PrimitiveType.Sphere, skin, new Vector3(0f, -0.036f, 0f), new Vector3(0.074f, 0.04f, 0.03f), hand);                   // heel
 
-            // four fingers: three phalanges each, tapering, curling naturally towards the palm (-Z)
-            float[] baseX = { -0.031f, -0.0105f, 0.0095f, 0.029f };
-            float[] len = { 0.07f, 0.084f, 0.079f, 0.061f };
-            float[] spread = { -7f, -2f, 2.5f, 8f };
-            float[] curl = { 16f, 13f, 15f, 22f };
+            // four fingers (index .. little): real proportions, a relaxed curl, a knuckle on the back of each root
+            float[] baseX = { 0.031f, 0.0105f, -0.0095f, -0.029f };   // measured towards the inner side
+            float[] len = { 0.072f, 0.081f, 0.075f, 0.058f };
+            float[] radius = { 0.0088f, 0.009f, 0.0085f, 0.0074f };
+            float[] spread = { 8f, 2.5f, -3f, -9f };                   // degrees away from the middle finger, positive = outward
+            float[] curl = { 13f, 16f, 20f, 26f };
             for (int f = 0; f < 4; f++)
-                Finger(hand, new Vector3(baseX[f], 0.046f, 0f), Quaternion.Euler(0f, 0f, -spread[f]), len[f], 0.0085f, curl[f], skin, 3);
+            {
+                float x = inner * baseX[f];
+                Finger(hand, new Vector3(x, 0.046f, 0f), Quaternion.Euler(0f, 0f, side * spread[f]), len[f], radius[f], curl[f], skin, pad, nail, 3);
+                Prim(PrimitiveType.Sphere, pad, new Vector3(x, 0.046f, 0.01f), new Vector3(0.021f, 0.019f, 0.018f), hand);   // knuckle
+            }
 
-            // thumb: sticks out diagonally from the outer side of the palm and opposes towards the palm
-            Finger(hand, new Vector3(side * 0.04f, -0.012f, -0.006f), Quaternion.Euler(-28f, 0f, side * -62f), 0.066f, 0.011f, 18f, skin, 2);
+            // thumb: from the inner side of the palm, pointing inward and forward, opposing towards the palm
+            Finger(hand, new Vector3(inner * 0.04f, -0.012f, -0.006f), Quaternion.Euler(-28f, 0f, side * 62f), 0.062f, 0.0115f, 18f, skin, pad, nail, 2);
 
             // wrist, cuff, forearm
-            Prim(PrimitiveType.Capsule, skin, new Vector3(0f, -0.085f, 0.003f), new Vector3(0.062f, 0.032f, 0.042f), hand);
+            Prim(PrimitiveType.Capsule, skin, new Vector3(0f, -0.085f, 0.003f), new Vector3(0.064f, 0.032f, 0.038f), hand);
             Prim(PrimitiveType.Cylinder, sleeve, new Vector3(0f, -0.118f, 0.005f), new Vector3(0.092f, 0.013f, 0.072f), hand, new Vector3(-4f, 0f, 0f));
             var forearm = Prim(PrimitiveType.Capsule, sleeve, new Vector3(0f, -0.26f, 0.012f), new Vector3(0.084f, 0.155f, 0.08f), hand, new Vector3(-5f, 0f, 0f));
             int i = side < 0 ? 0 : 1;
@@ -293,10 +308,13 @@ public class FirstPersonFlowerDeath : MonoBehaviour
         return root;
     }
 
-    /// <summary>One finger: `segments` capsules + joint spheres; each segment bends curlDeg around X towards -Z (the palm).</summary>
-    static void Finger(Transform hand, Vector3 basePos, Quaternion baseRot, float length, float radius, float curlDeg, Material skin, int segments)
+    /// <summary>
+    /// One finger: `segments` tapering capsules, a bony joint between them, a soft pad and a nail on the last one.
+    /// Each segment bends curlDeg around X towards -Z (the palm); the root bends a little less.
+    /// </summary>
+    static void Finger(Transform hand, Vector3 basePos, Quaternion baseRot, float length, float radius, float curlDeg, Material skin, Material pad, Material nail, int segments)
     {
-        float[] frac = segments == 3 ? new[] { 0.45f, 0.3f, 0.25f } : new[] { 0.55f, 0.45f };
+        float[] frac = segments == 3 ? new[] { 0.42f, 0.32f, 0.26f } : new[] { 0.55f, 0.45f };
         var cur = new GameObject("Finger").transform;
         cur.SetParent(hand, false);
         cur.localPosition = basePos;
@@ -310,12 +328,17 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             seg.localRotation = Quaternion.Euler(-curlDeg * (i == 0 ? 0.6f : 1f), 0f, 0f);
             Prim(PrimitiveType.Capsule, skin, new Vector3(0f, segLen * 0.5f, 0f), new Vector3(r * 2f, segLen * 0.5f, r * 2f), seg);
             if (i < segments - 1)
-                Prim(PrimitiveType.Sphere, skin, new Vector3(0f, segLen, 0f), Vector3.one * r * 2.15f, seg);   // joint
+                Prim(PrimitiveType.Sphere, pad, new Vector3(0f, segLen, 0f), Vector3.one * r * 2.25f, seg);   // joint
+            else
+            {
+                Prim(PrimitiveType.Sphere, pad, new Vector3(0f, segLen - r * 0.3f, -r * 0.15f), new Vector3(r * 2.1f, r * 2.3f, r * 1.8f), seg);   // fingertip pad
+                Prim(PrimitiveType.Sphere, nail, new Vector3(0f, segLen * 0.55f, r * 0.8f), new Vector3(r * 1.5f, r * 2.3f, r * 0.6f), seg);      // nail on the back
+            }
             var next = new GameObject("Joint").transform;
             next.SetParent(seg, false);
             next.localPosition = new Vector3(0f, segLen, 0f);
             cur = next;
-            r *= 0.88f;
+            r *= 0.9f;
         }
     }
 }
