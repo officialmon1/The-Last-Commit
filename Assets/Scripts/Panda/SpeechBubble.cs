@@ -7,8 +7,8 @@ namespace Panda
     /// <summary>
     /// Screen-space bubble showing what the panda is "saying", with up to two reply buttons.
     /// Floats above <see cref="anchor"/>'s head while it's walking/following; once it's parked still
-    /// beside the terminal (the code editor is open), it moves near its feet instead so it doesn't
-    /// overlap the hints/problem panels pinned to the top of the screen. Docks to a corner if off screen.
+    /// beside the terminal (the code editor is open), it moves to the panda's right instead, near the
+    /// top of its head, clear of both the panda itself and the code editor panel. Docks to a corner if off screen.
     /// </summary>
     public class SpeechBubble : MonoBehaviour
     {
@@ -25,6 +25,8 @@ namespace Panda
         public float headGap = 0.25f;
         [Tooltip("Keep the bubble this many pixels away from the screen edge.")]
         public float screenMargin = 16f;
+        [Tooltip("Extra pixels of breathing room beyond the head's own on-screen edge, while parked at the terminal.")]
+        public float parkedSideGap = 40f;
 
         public const string IdleText = "Stuck on something? Click me for a hint.";
 
@@ -42,8 +44,61 @@ namespace Panda
             _dockAnchorMin = _rect.anchorMin;
             _dockAnchorMax = _rect.anchorMax;
             _dockPos = _rect.anchoredPosition;
+            ApplyForestTheme();
             BuildTail();
+            BuildVineAccents();
             ShowText(IdleText);
+        }
+
+        /// <summary>Forest-green parchment bubble with an amber border, cream text and warmer button colours.</summary>
+        void ApplyForestTheme()
+        {
+            // the root's own Image becomes the amber frame; children always render on top of their parent in
+            // Unity UI, so the inset green "fill" below has to be a child of it to appear layered correctly
+            var root = GetComponent<Image>();
+            if (root != null)
+            {
+                root.color = ForestTheme.Amber;
+                root.sprite = ForestTheme.PanelSprite;
+                root.type = Image.Type.Sliced;
+            }
+
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(transform, false);
+            fill.transform.SetAsFirstSibling();
+            var fillImg = fill.GetComponent<Image>();
+            fillImg.color = ForestTheme.PanelBg;
+            fillImg.sprite = ForestTheme.PanelSprite;
+            fillImg.type = Image.Type.Sliced;
+            fillImg.raycastTarget = false;
+            var frt = (RectTransform)fill.transform;
+            frt.anchorMin = Vector2.zero;
+            frt.anchorMax = Vector2.one;
+            frt.offsetMin = new Vector2(4f, 4f);
+            frt.offsetMax = new Vector2(-4f, -4f);
+
+            var font = ForestTheme.ElegantFont();
+            Style(bubbleText, font, ForestTheme.TextCream);
+            Style(button1Label, font, ForestTheme.TextCream);
+            Style(button2Label, font, ForestTheme.TextCream);
+            var img1 = button1 != null ? button1.GetComponent<Image>() : null;
+            if (img1 != null) img1.color = ForestTheme.AccentGreen;
+            var img2 = button2 != null ? button2.GetComponent<Image>() : null;
+            if (img2 != null) img2.color = ForestTheme.AccentMuted;
+        }
+
+        static void Style(Text t, Font font, Color color)
+        {
+            if (t == null) return;
+            if (font != null) t.font = font;
+            t.color = color;
+        }
+
+        /// <summary>Two small amber "leaf" dots in the top corners -- a light vine-like flourish without needing art assets.</summary>
+        void BuildVineAccents()
+        {
+            ForestTheme.AddLeafAccent(transform, new Vector2(0f, 1f), new Vector2(10f, -8f));
+            ForestTheme.AddLeafAccent(transform, new Vector2(1f, 1f), new Vector2(-10f, -8f));
         }
 
         void BuildTail()
@@ -51,8 +106,7 @@ namespace Panda
             var go = new GameObject("Tail", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(transform, false);
             go.transform.SetAsFirstSibling(); // behind the text and buttons
-            var bg = GetComponent<Image>();
-            go.GetComponent<Image>().color = bg != null ? bg.color : Color.white;
+            go.GetComponent<Image>().color = ForestTheme.PanelBg; // matches the green fill, not the amber frame
             go.GetComponent<Image>().raycastTarget = false;
             _tail = (RectTransform)go.transform;
             _tail.anchorMin = _tail.anchorMax = new Vector2(0.5f, 0f);
@@ -71,27 +125,15 @@ namespace Panda
             float maxX = CodeEditorUI.IsOpen ? Screen.width * 0.52f : Screen.width;
 
             // While walking/following, the bubble floats above the panda's head as usual. Once it's parked
-            // still beside the terminal, the hints/problem panels occupy the top of the screen, so the bubble
-            // moves near its feet instead so the two never overlap.
-            bool below = CodeEditorUI.IsOpen;
+            // still beside the terminal, it moves to the panda's right instead, near the top of its head --
+            // clear of the panda's own model and (via maxX above) clear of the code editor panel too.
+            bool parked = CodeEditorUI.IsOpen;
 
             if (_anchorCollider == null || _anchorCollider.transform != anchor) _anchorCollider = anchor.GetComponentInChildren<Collider>();
-            Vector3 anchorPoint;
-            if (below)
-            {
-                anchorPoint = _anchorCollider != null
-                    ? new Vector3(_anchorCollider.bounds.center.x, _anchorCollider.bounds.min.y, _anchorCollider.bounds.center.z)
-                    : anchor.position;
-                anchorPoint -= Vector3.up * headGap;
-            }
-            else
-            {
-                anchorPoint = _anchorCollider != null
-                    ? new Vector3(_anchorCollider.bounds.center.x, _anchorCollider.bounds.max.y, _anchorCollider.bounds.center.z)
-                    : anchor.position + Vector3.up * 1.2f;
-                anchorPoint += Vector3.up * headGap;
-            }
-            Vector3 sp = cam.WorldToScreenPoint(anchorPoint);
+            Vector3 head = _anchorCollider != null
+                ? new Vector3(_anchorCollider.bounds.center.x, _anchorCollider.bounds.max.y, _anchorCollider.bounds.center.z)
+                : anchor.position + Vector3.up * 1.2f;
+            Vector3 sp = cam.WorldToScreenPoint(parked ? head : head + Vector3.up * headGap);
 
             bool onScreen = sp.z > 0f && sp.x > 0f && sp.x < maxX && sp.y > 0f && sp.y < Screen.height;
             if (!onScreen) { Dock(); return; }
@@ -101,19 +143,42 @@ namespace Panda
             float tailH = 20f * scale; // half the diagonal of the rotated tail square
 
             _rect.anchorMin = _rect.anchorMax = Vector2.zero;
-            _rect.pivot = new Vector2(0.5f, below ? 1f : 0f);
-
-            float x = Mathf.Clamp(sp.x, screenMargin + size.x / 2f, maxX - screenMargin - size.x / 2f);
-            float y = below
-                ? Mathf.Clamp(sp.y - tailH, screenMargin + size.y, Screen.height - screenMargin)
-                : Mathf.Clamp(sp.y + tailH, screenMargin, Screen.height - screenMargin - size.y);
-            _rect.position = new Vector3(x, y, 0f);
-
-            // the tail points toward the panda; slide it along the bubble's near edge if the bubble got clamped
             _tail.gameObject.SetActive(true);
-            _tail.anchorMin = _tail.anchorMax = new Vector2(0.5f, below ? 1f : 0f);
-            float tailX = Mathf.Clamp((sp.x - x) / scale, -_rect.rect.width / 2f + 20f, _rect.rect.width / 2f - 20f);
-            _tail.anchoredPosition = new Vector2(tailX, 0f);
+
+            if (parked)
+            {
+                // box sits to the right of the head, near the top, with real clearance so it never touches the
+                // face; tail points left, back at the panda. The gap is measured from the head's own on-screen
+                // edge (not its center), so it stays clear of the face regardless of how close/zoomed-in the
+                // panda appears -- a fixed pixel gap from the center alone would get swallowed up close.
+                float headHalfWidthPx = 0f;
+                if (_anchorCollider != null)
+                {
+                    Vector3 edge = new Vector3(_anchorCollider.bounds.max.x, head.y, head.z);
+                    Vector3 spEdge = cam.WorldToScreenPoint(edge);
+                    headHalfWidthPx = Mathf.Abs(spEdge.x - sp.x);
+                }
+                _rect.pivot = new Vector2(0f, 1f);
+                float x = Mathf.Clamp(sp.x + headHalfWidthPx + parkedSideGap * scale, screenMargin, maxX - screenMargin - size.x);
+                float y = Mathf.Clamp(sp.y, screenMargin + size.y, Screen.height - screenMargin);
+                _rect.position = new Vector3(x, y, 0f);
+
+                _tail.anchorMin = _tail.anchorMax = new Vector2(0f, 1f);
+                float tailY = Mathf.Clamp((sp.y - y) / scale, -_rect.rect.height + 20f, -20f);
+                _tail.anchoredPosition = new Vector2(0f, tailY);
+            }
+            else
+            {
+                // box floats above the head, centered; tail points down at the panda
+                _rect.pivot = new Vector2(0.5f, 0f);
+                float x = Mathf.Clamp(sp.x, screenMargin + size.x / 2f, maxX - screenMargin - size.x / 2f);
+                float y = Mathf.Clamp(sp.y + tailH, screenMargin, Screen.height - screenMargin - size.y);
+                _rect.position = new Vector3(x, y, 0f);
+
+                _tail.anchorMin = _tail.anchorMax = new Vector2(0.5f, 0f);
+                float tailX = Mathf.Clamp((sp.x - x) / scale, -_rect.rect.width / 2f + 20f, _rect.rect.width / 2f - 20f);
+                _tail.anchoredPosition = new Vector2(tailX, 0f);
+            }
         }
 
         void Dock()

@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Panda;
 
 /// <summary>
 /// First-person petal-death demo: press the death key -> raise both hands -> watch them turn into petals ->
@@ -226,7 +227,7 @@ public class FirstPersonFlowerDeath : MonoBehaviour
             GUI.color = Color.white;
         }
         float k = CodeEditorUI.ScaleFor(Screen.height);   // scale up on high-DPI (Retina) screens
-        GUI.Label(new Rect(16 * k, 12 * k, 600 * k, 30 * k), _status, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(20 * k), normal = { textColor = new Color(1, 1, 1, 0.9f) } });
+        GUI.Label(new Rect(16 * k, 12 * k, 600 * k, 30 * k), _status, new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(20 * k), font = ForestTheme.ElegantFont(), normal = { textColor = ForestTheme.TextCream } });
     }
 
     // ------------------------------------------------------------------ Scene setup
